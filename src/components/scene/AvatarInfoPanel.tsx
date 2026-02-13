@@ -1,11 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Cpu, Clock } from "lucide-react";
+import { X, Cpu, Clock, ArrowRightLeft } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useStore } from "@/store/useStore";
 import { AVATAR_PROVIDER_LABELS } from "@/types";
 import { formatTime } from "@/lib/utils";
 
 export function AvatarInfoPanel() {
   const { selectedAvatar, select } = useAvatar();
+  const rooms = useStore((s) => s.rooms);
+  const moveAvatarToRoom = useStore((s) => s.moveAvatarToRoom);
 
   return (
     <AnimatePresence>
@@ -56,6 +59,34 @@ export function AvatarInfoPanel() {
                 {selectedAvatar.status}
               </span>
             </div>
+
+            {/* Move to room */}
+            {rooms.filter((r) => r.id !== selectedAvatar.roomId).length > 0 && (
+              <div className="mb-3">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase text-text-muted">
+                  <ArrowRightLeft className="h-3 w-3" />
+                  Move to
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {rooms
+                    .filter((r) => r.id !== selectedAvatar.roomId)
+                    .map((room) => (
+                      <button
+                        key={room.id}
+                        onClick={() => moveAvatarToRoom(selectedAvatar.id, room.id)}
+                        className="rounded px-2 py-1 text-[10px] font-medium transition-colors hover:brightness-125"
+                        style={{
+                          backgroundColor: `${room.borderColor}20`,
+                          color: room.borderColor,
+                          border: `1px solid ${room.borderColor}40`,
+                        }}
+                      >
+                        {room.label}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Current Action */}
             {selectedAvatar.currentAction && (

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-/** Centralised isometric camera & room config */
+/** Centralised isometric camera config */
 export function useScene() {
   const camera = useMemo(
     () => ({
@@ -12,17 +12,5 @@ export function useScene() {
     [],
   );
 
-  const room = useMemo(
-    () => ({
-      width: 8,
-      depth: 6,
-      borderColor: "#ff3c3c",
-      floorColor: "#0a0608",
-      floorOpacity: 0.6,
-      label: "App Development",
-    }),
-    [],
-  );
-
-  return { camera, room };
+  return { camera };
 }

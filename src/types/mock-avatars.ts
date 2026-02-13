@@ -12,6 +12,7 @@ export const mockAvatars: AvatarData[] = [
     currentAction: null,
     history: [],
     position: [-1.2, 0, 0.5],
+    roomId: "room-dev",
   },
   {
     id: "avatar-designer",
@@ -24,6 +25,7 @@ export const mockAvatars: AvatarData[] = [
     currentAction: null,
     history: [],
     position: [0.8, 0, 0.2],
+    roomId: "room-dev",
   },
   {
     id: "avatar-pm",
@@ -36,5 +38,6 @@ export const mockAvatars: AvatarData[] = [
     currentAction: null,
     history: [],
     position: [2.5, 0, -0.8],
+    roomId: "room-dev",
   },
 ];

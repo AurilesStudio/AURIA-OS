@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 import type { AvatarData } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
@@ -9,17 +10,16 @@ import { AvatarLabel } from "./AvatarLabel";
 
 interface AvatarModelProps {
   avatar: AvatarData;
+  onDragStart?: (avatarId: string, e: ThreeEvent<PointerEvent>) => void;
 }
 
 /**
  * Voxel / chibi-style procedural avatar.
  * Blocky proportions: big head, stubby body, small limbs.
- * Swap this for <primitive object={gltf.scene} /> when you have GLB models.
  */
-export function AvatarModel({ avatar }: AvatarModelProps) {
+export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const groupRef = useRef<Group>(null);
   const selectedAvatarId = useStore((s) => s.selectedAvatarId);
-  const selectAvatar = useStore((s) => s.selectAvatar);
 
   const isSelected = selectedAvatarId === avatar.id;
 
@@ -39,9 +39,11 @@ export function AvatarModel({ avatar }: AvatarModelProps) {
     }
   });
 
-  const handleClick = (e: { stopPropagation: () => void }) => {
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    selectAvatar(isSelected ? null : avatar.id);
+    if (onDragStart) {
+      onDragStart(avatar.id, e);
+    }
   };
 
   // Skin tone (warm) vs outfit (avatar color)
@@ -51,7 +53,7 @@ export function AvatarModel({ avatar }: AvatarModelProps) {
 
   return (
     <group position={avatar.position}>
-      <group ref={groupRef} onClick={handleClick}>
+      <group ref={groupRef} onPointerDown={handlePointerDown}>
 
         {/* === LEGS === */}
         {/* Left leg */}

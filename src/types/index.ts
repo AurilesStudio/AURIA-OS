@@ -55,10 +55,17 @@ export type {
   LLMProvider,
   AvatarAction,
   AvatarData,
+  RoomData,
 } from "./avatar";
 
 export {
   AVATAR_ROLE_LABELS,
   AVATAR_PROVIDER_LABELS,
   AVATAR_COLORS,
+  ROOM_SIZE,
+  ROOM_FLOOR_COLOR,
+  ROOM_FLOOR_OPACITY,
+  ROOM_BORDER_COLORS,
+  ROOM_SPACING_X,
+  ROOM_SPACING_Z,
 } from "./avatar";
