@@ -1,0 +1,145 @@
+import type {
+  TokenGaugeData,
+  ActivityEntry,
+  ProjectData,
+} from "./index";
+
+export const mockGauges: TokenGaugeData[] = [
+  {
+    provider: "gemini",
+    label: "Gemini 2.0",
+    used: 847_520,
+    limit: 2_000_000,
+    color: "#ff003c",
+  },
+  {
+    provider: "claude",
+    label: "Claude Opus",
+    used: 1_234_567,
+    limit: 5_000_000,
+    color: "#bf00ff",
+  },
+  {
+    provider: "mistral",
+    label: "Mistral Large",
+    used: 312_890,
+    limit: 1_000_000,
+    color: "#ff2d7a",
+  },
+];
+
+export const mockActivities: ActivityEntry[] = [
+  {
+    id: "act-1",
+    timestamp: new Date(Date.now() - 300_000),
+    type: "SYSTEM",
+    message: "AURIA-OS v0.1.0 initialized",
+    source: "core",
+  },
+  {
+    id: "act-2",
+    timestamp: new Date(Date.now() - 240_000),
+    type: "INFO",
+    message: "Connected to Linear workspace: Auriles Studio",
+    source: "linear",
+  },
+  {
+    id: "act-3",
+    timestamp: new Date(Date.now() - 180_000),
+    type: "INFO",
+    message: "Token gauges loaded — 3 providers active",
+    source: "monitoring",
+  },
+  {
+    id: "act-4",
+    timestamp: new Date(Date.now() - 120_000),
+    type: "CMD",
+    message: "git pull origin main — Auriforce Script",
+    source: "git",
+  },
+  {
+    id: "act-5",
+    timestamp: new Date(Date.now() - 90_000),
+    type: "WARN",
+    message: "Gemini rate limit approaching (85% used)",
+    source: "monitoring",
+  },
+  {
+    id: "act-6",
+    timestamp: new Date(Date.now() - 60_000),
+    type: "INFO",
+    message: "Auriforce LP build triggered via webhook",
+    source: "ci",
+  },
+  {
+    id: "act-7",
+    timestamp: new Date(Date.now() - 30_000),
+    type: "ERROR",
+    message: "Mistral API timeout — retrying in 5s",
+    source: "api",
+  },
+  {
+    id: "act-8",
+    timestamp: new Date(Date.now() - 10_000),
+    type: "INFO",
+    message: "6 projects synced from Linear",
+    source: "linear",
+  },
+];
+
+export const mockProjects: ProjectData[] = [
+  {
+    id: "proj-1",
+    name: "Auriforce - Script",
+    slug: "auriforce-script",
+    status: "In Progress",
+    description: "Salesforce automation scripts & tooling",
+    progress: 65,
+    team: "Engineering",
+  },
+  {
+    id: "proj-2",
+    name: "Auriforce - Landing Page",
+    slug: "auriforce-lp",
+    status: "Planned",
+    description: "Premium landing page for Auriforce",
+    progress: 15,
+    team: "Design",
+  },
+  {
+    id: "proj-3",
+    name: "Auri Financial Tracker",
+    slug: "auri-tracker",
+    status: "Backlog",
+    description: "Financial management dashboard",
+    progress: 0,
+    team: "Product",
+  },
+  {
+    id: "proj-4",
+    name: "AURIA-milli",
+    slug: "auria-milli",
+    status: "Backlog",
+    description: "AURIA micro-services infrastructure",
+    progress: 5,
+    team: "Engineering",
+  },
+  {
+    id: "proj-5",
+    name: "Site Web Auriles Studio",
+    slug: "auriles-site",
+    status: "Planned",
+    description: "Studio showcase website",
+    progress: 20,
+    team: "Design",
+  },
+  {
+    id: "proj-6",
+    name: "AURIA-OS",
+    slug: "auria-os",
+    status: "In Progress",
+    description: "Mission Control command center",
+    progress: 40,
+    team: "Engineering",
+  },
+];

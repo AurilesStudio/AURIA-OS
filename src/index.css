@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@theme {
+  /* Neon Red/Purple palette */
+  --color-neon-red: #ff003c;
+  --color-neon-purple: #bf00ff;
+  --color-neon-pink: #ff2d7a;
+
+  /* Backgrounds */
+  --color-bg-base: #030305;
+  --color-bg-surface: #0a0a0f;
+  --color-bg-elevated: #111118;
+
+  /* Text */
+  --color-text-primary: #e5e5ef;
+  --color-text-muted: #6b6b80;
+
+  /* Status */
+  --color-status-idle: #6366f1;
+  --color-status-processing: #bf00ff;
+  --color-status-error: #ff003c;
+  --color-status-deploying: #f59e0b;
+  --color-status-success: #10b981;
+
+  /* Gauge brand colors */
+  --color-gauge-gemini: #ff003c;
+  --color-gauge-claude: #bf00ff;
+  --color-gauge-mistral: #ff2d7a;
+
+  /* Font */
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Base styles */
+html {
+  font-family: var(--font-mono);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neon-purple);
+}
+
+/* Glow utilities */
+.glow-red {
+  box-shadow: 0 0 20px rgba(255, 0, 60, 0.3), 0 0 60px rgba(255, 0, 60, 0.1);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(191, 0, 255, 0.3),
+    0 0 60px rgba(191, 0, 255, 0.1);
+}
+
+.glow-pink {
+  box-shadow: 0 0 20px rgba(255, 45, 122, 0.3),
+    0 0 60px rgba(255, 45, 122, 0.1);
+}
+
+/* Text glow */
+.text-glow-red {
+  text-shadow: 0 0 10px rgba(255, 0, 60, 0.5), 0 0 30px rgba(255, 0, 60, 0.3);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(191, 0, 255, 0.5),
+    0 0 30px rgba(191, 0, 255, 0.3);
+}
+
+/* Scan-line effect (subtle) */
+.scan-lines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+}
+
+/* Overlay glass panels — semi-transparent over the 3D scene */
+.overlay-glass {
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Nebula background — dark with subtle warm color hints */
+.scene-nebula {
+  background: radial-gradient(
+      ellipse at 25% 25%,
+      rgba(15, 35, 42, 0.6) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 75% 55%,
+      rgba(30, 12, 45, 0.5) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 50% 85%,
+      rgba(40, 10, 25, 0.3) 0%,
+      transparent 40%
+    ),
+    #0a0515;
+}
