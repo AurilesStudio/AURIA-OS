@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Html, Line } from "@react-three/drei";
+import { Line, Text } from "@react-three/drei";
 import { useScene } from "@/hooks/useScene";
 
 /** Rectangular room zone with neon border outline + label */
@@ -40,24 +40,26 @@ export function IsometricRoom() {
         lineWidth={1.5}
       />
 
-      {/* Room label at bottom-left edge */}
-      <Html
-        position={[-hw + 0.3, 0.02, hd + 0.15]}
-        center={false}
-        distanceFactor={10}
-        zIndexRange={[5, 0]}
+      {/* Room label — flat on floor along bottom-left border (front-left edge, +Z side) */}
+      <Text
+        position={[-hw + 1.6, 0.03, hd + 0.45]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.32}
+        color={room.borderColor}
+        anchorX="center"
+        anchorY="top"
+        fillOpacity={0.8}
+        letterSpacing={0.12}
       >
-        <div
-          className="pointer-events-none select-none whitespace-nowrap font-mono text-[11px] font-semibold uppercase tracking-widest"
-          style={{
-            color: room.borderColor,
-            opacity: 0.6,
-            textShadow: `0 0 6px ${room.borderColor}40`,
-          }}
-        >
-          {room.label}
-        </div>
-      </Html>
+        {room.label.toUpperCase()}
+        <meshStandardMaterial
+          color={room.borderColor}
+          emissive={room.borderColor}
+          emissiveIntensity={0.6}
+          transparent
+          opacity={0.8}
+        />
+      </Text>
     </group>
   );
 }
