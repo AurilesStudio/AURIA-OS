@@ -26,7 +26,43 @@ export interface AvatarData {
   history: AvatarAction[];
   position: [x: number, y: number, z: number];
   roomId: string;
+  apiKey: string;
 }
+
+/** Catalog entry shown in the Recruit modal */
+export interface AgentTemplate {
+  provider: LLMProvider;
+  label: string;
+  defaultName: string;
+  color: string;
+  defaultRole: AvatarRole;
+}
+
+export const AGENT_TEMPLATES: AgentTemplate[] = [
+  { provider: "claude", label: "Claude (Anthropic)", defaultName: "Claude", color: "#bf00ff", defaultRole: "dev" },
+  { provider: "gemini", label: "Gemini (Google)", defaultName: "Gemini", color: "#ff003c", defaultRole: "designer" },
+  { provider: "mistral", label: "Mistral", defaultName: "Mistral", color: "#ff2d7a", defaultRole: "pm" },
+];
+
+// ── Skill Types ──────────────────────────────────────────────
+
+export interface SkillData {
+  id: string;
+  name: string;
+  icon: string;   // label court ("UI", "API", "CI"...)
+  color: string;
+}
+
+export const SKILLS: SkillData[] = [
+  { id: "frontend",  name: "Frontend",       icon: "UI",  color: "#3caaff" },
+  { id: "backend",   name: "Backend",        icon: "API", color: "#10b981" },
+  { id: "devops",    name: "DevOps / CI-CD", icon: "CI",  color: "#facc15" },
+  { id: "design",    name: "Design / UX",    icon: "UX",  color: "#ff2d7a" },
+  { id: "database",  name: "Database",       icon: "DB",  color: "#a855f7" },
+  { id: "testing",   name: "Testing / QA",   icon: "QA",  color: "#22d3ee" },
+  { id: "security",  name: "Security",       icon: "SEC", color: "#ff3c3c" },
+  { id: "docs",      name: "Documentation",  icon: "DOC", color: "#6b7280" },
+];
 
 // ── Room Types ───────────────────────────────────────────────
 
@@ -35,6 +71,7 @@ export interface RoomData {
   label: string;
   position: [x: number, y: number, z: number];
   borderColor: string;
+  skillIds: string[];
 }
 
 /** All rooms share the same footprint */

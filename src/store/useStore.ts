@@ -9,12 +9,15 @@ import type {
   AvatarData,
   AvatarStatus,
   RoomData,
+  LLMProvider,
+  AvatarRole,
 } from "@/types";
 import {
   ROOM_SIZE,
   ROOM_BORDER_COLORS,
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
+  AGENT_TEMPLATES,
 } from "@/types";
 import { mockGauges, mockActivities, mockProjects } from "@/types/mock-data";
 import { mockAvatars } from "@/types/mock-avatars";
@@ -27,18 +30,21 @@ const defaultRooms: RoomData[] = [
     label: "App Development",
     position: [0, 0, 0],
     borderColor: ROOM_BORDER_COLORS[0],
+    skillIds: [],
   },
   {
     id: "room-vps",
     label: "VPS & Infra",
     position: [ROOM_SPACING_X, 0, 0],
     borderColor: ROOM_BORDER_COLORS[1],
+    skillIds: [],
   },
   {
     id: "room-design",
     label: "Design Studio",
     position: [0, 0, ROOM_SPACING_Z],
     borderColor: ROOM_BORDER_COLORS[2],
+    skillIds: [],
   },
 ];
 
@@ -64,6 +70,15 @@ function nextRoomPosition(rooms: RoomData[]): [number, number, number] {
   return [rooms.length * ROOM_SPACING_X, 0, 0];
 }
 
+// ── AURIA message type ───────────────────────────────────────
+export interface AuriaMessage {
+  id: string;
+  role: "user" | "auria";
+  text: string;
+  timestamp: Date;
+  targetAgent?: string; // avatar id if directed at a specific agent
+}
+
 // ── Store interface ──────────────────────────────────────────
 interface AuriaStore {
   // System
@@ -85,16 +100,30 @@ interface AuriaStore {
   // Projects
   projects: ProjectData[];
 
+  // AURIA Command Center
+  commandCenterOpen: boolean;
+  setCommandCenterOpen: (open: boolean) => void;
+
+  // Skills panel
+  skillsPanelOpen: boolean;
+  setSkillsPanelOpen: (open: boolean) => void;
+  auriaMessages: AuriaMessage[];
+  sendAuriaMessage: (text: string, targetAgent?: string) => void;
+
   // Rooms
   rooms: RoomData[];
   addRoom: (label: string) => void;
   renameRoom: (roomId: string, label: string) => void;
   removeRoom: (roomId: string) => void;
+  toggleRoomSkill: (roomId: string, skillId: string) => void;
 
   // Avatars
   avatars: AvatarData[];
   selectedAvatarId: string | null;
   selectAvatar: (id: string | null) => void;
+  addAvatar: (provider: LLMProvider) => void;
+  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color">>) => void;
+  removeAvatar: (avatarId: string) => void;
   assignAction: (avatarId: string, prompt: string) => void;
   completeAction: (avatarId: string, result: string) => void;
   failAction: (avatarId: string, error: string) => void;
@@ -135,6 +164,55 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
   projects: mockProjects,
 
+  // ── AURIA Command Center ────────────────────────────────────
+  commandCenterOpen: false,
+  setCommandCenterOpen: (open) => set({ commandCenterOpen: open }),
+
+  skillsPanelOpen: false,
+  setSkillsPanelOpen: (open) => set({ skillsPanelOpen: open }),
+
+  auriaMessages: [],
+  sendAuriaMessage: (text, targetAgent) =>
+    set((state) => {
+      const userMsg: AuriaMessage = {
+        id: generateId(),
+        role: "user",
+        text,
+        timestamp: new Date(),
+        targetAgent,
+      };
+
+      // Build AURIA's simulated response
+      let reply: string;
+      if (targetAgent) {
+        const agent = state.avatars.find((a) => a.id === targetAgent);
+        reply = `Roger. Dispatching to ${agent?.name ?? "agent"}. Standing by for execution.`;
+      } else {
+        reply = `Acknowledged. Processing: "${text.slice(0, 60)}${text.length > 60 ? "..." : ""}". All agents notified.`;
+      }
+
+      const auriaMsg: AuriaMessage = {
+        id: generateId(),
+        role: "auria",
+        text: reply,
+        timestamp: new Date(),
+      };
+
+      return {
+        auriaMessages: [...state.auriaMessages, userMsg, auriaMsg],
+        activities: [
+          ...state.activities,
+          {
+            id: generateId(),
+            timestamp: new Date(),
+            type: "CMD" as const,
+            message: `[AURIA] ${text}`,
+            source: "auria",
+          },
+        ],
+      };
+    }),
+
   // ── Rooms slice ───────────────────────────────────────────
   rooms: defaultRooms,
 
@@ -146,9 +224,24 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         label,
         position: nextRoomPosition(state.rooms),
         borderColor: ROOM_BORDER_COLORS[colorIdx] as string,
+        skillIds: [],
       };
       return { rooms: [...state.rooms, room] };
     }),
+
+  toggleRoomSkill: (roomId, skillId) =>
+    set((state) => ({
+      rooms: state.rooms.map((r) => {
+        if (r.id !== roomId) return r;
+        const has = r.skillIds.includes(skillId);
+        return {
+          ...r,
+          skillIds: has
+            ? r.skillIds.filter((s) => s !== skillId)
+            : [...r.skillIds, skillId],
+        };
+      }),
+    })),
 
   renameRoom: (roomId, label) =>
     set((state) => ({
@@ -184,6 +277,48 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   selectedAvatarId: null,
 
   selectAvatar: (id) => set({ selectedAvatarId: id }),
+
+  addAvatar: (provider) =>
+    set((state) => {
+      const template = AGENT_TEMPLATES.find((t) => t.provider === provider);
+      if (!template) return state;
+      // Count existing avatars of this provider to generate unique name
+      const count = state.avatars.filter((a) => a.provider === provider).length;
+      const suffix = count > 0 ? ` ${count + 1}` : "";
+      // Place in the first room
+      const room = state.rooms[0];
+      if (!room) return state;
+      const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
+      const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
+      const avatar: AvatarData = {
+        id: `avatar-${generateId()}`,
+        name: `${template.defaultName}${suffix}`,
+        role: template.defaultRole,
+        provider: template.provider,
+        color: template.color,
+        modelUrl: "",
+        status: "idle",
+        currentAction: null,
+        history: [],
+        position: [room.position[0] + ox, 0, room.position[2] + oz],
+        roomId: room.id,
+        apiKey: "",
+      };
+      return { avatars: [...state.avatars, avatar], selectedAvatarId: avatar.id };
+    }),
+
+  updateAvatar: (avatarId, data) =>
+    set((state) => ({
+      avatars: state.avatars.map((a) =>
+        a.id === avatarId ? { ...a, ...data } : a,
+      ),
+    })),
+
+  removeAvatar: (avatarId) =>
+    set((state) => ({
+      avatars: state.avatars.filter((a) => a.id !== avatarId),
+      selectedAvatarId: state.selectedAvatarId === avatarId ? null : state.selectedAvatarId,
+    })),
 
   assignAction: (avatarId, prompt) =>
     set((state) => {
@@ -307,30 +442,57 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   name: "auria-store",
   partialize: (state) => ({
     rooms: state.rooms,
-    // Persist only roomId + position per avatar (keyed by id)
     avatars: state.avatars.map((a) => ({
       id: a.id,
+      name: a.name,
+      role: a.role,
+      provider: a.provider,
+      color: a.color,
       roomId: a.roomId,
       position: a.position,
+      apiKey: a.apiKey,
     })),
   }),
   merge: (persisted, current) => {
+    type SavedAvatar = {
+      id: string; name: string; role: AvatarRole; provider: LLMProvider;
+      color: string; roomId: string; position: [number, number, number]; apiKey: string;
+    };
     const saved = persisted as {
       rooms?: RoomData[];
-      avatars?: { id: string; roomId: string; position: [number, number, number] }[];
+      avatars?: SavedAvatar[];
     } | undefined;
     if (!saved) return current;
 
-    // Restore rooms
-    const rooms = saved.rooms && saved.rooms.length > 0 ? saved.rooms : current.rooms;
+    const rooms = saved.rooms && saved.rooms.length > 0
+      ? saved.rooms.map((r) => ({ ...r, skillIds: r.skillIds ?? [] }))
+      : current.rooms;
 
-    // Merge saved avatar positions into the default avatar objects
-    const avatarMap = new Map(
-      (saved.avatars ?? []).map((a) => [a.id, a]),
-    );
-    const avatars = current.avatars.map((a) => {
-      const s = avatarMap.get(a.id);
-      return s ? { ...a, roomId: s.roomId, position: s.position } : a;
+    if (!saved.avatars || saved.avatars.length === 0) {
+      return { ...current, rooms };
+    }
+
+    // Build map of default avatars for merging
+    const defaultMap = new Map(current.avatars.map((a) => [a.id, a]));
+
+    // Restore avatars: merge saved fields into defaults when available,
+    // or create full avatars for dynamically-added agents
+    const avatars: AvatarData[] = saved.avatars.map((s) => {
+      const base = defaultMap.get(s.id);
+      return {
+        id: s.id,
+        name: s.name,
+        role: s.role,
+        provider: s.provider,
+        color: s.color,
+        modelUrl: base?.modelUrl ?? "",
+        status: "idle" as const,
+        currentAction: null,
+        history: [],
+        position: s.position,
+        roomId: s.roomId,
+        apiKey: s.apiKey ?? "",
+      };
     });
 
     return { ...current, rooms, avatars };

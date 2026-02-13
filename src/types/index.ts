@@ -56,12 +56,16 @@ export type {
   AvatarAction,
   AvatarData,
   RoomData,
+  AgentTemplate,
+  SkillData,
 } from "./avatar";
 
 export {
   AVATAR_ROLE_LABELS,
   AVATAR_PROVIDER_LABELS,
   AVATAR_COLORS,
+  AGENT_TEMPLATES,
+  SKILLS,
   ROOM_SIZE,
   ROOM_FLOOR_COLOR,
   ROOM_FLOOR_OPACITY,

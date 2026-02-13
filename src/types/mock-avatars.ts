@@ -13,6 +13,7 @@ export const mockAvatars: AvatarData[] = [
     history: [],
     position: [-1.2, 0, 0.5],
     roomId: "room-dev",
+    apiKey: "",
   },
   {
     id: "avatar-designer",
@@ -26,6 +27,7 @@ export const mockAvatars: AvatarData[] = [
     history: [],
     position: [0.8, 0, 0.2],
     roomId: "room-dev",
+    apiKey: "",
   },
   {
     id: "avatar-pm",
@@ -39,5 +41,6 @@ export const mockAvatars: AvatarData[] = [
     history: [],
     position: [2.5, 0, -0.8],
     roomId: "room-dev",
+    apiKey: "",
   },
 ];
