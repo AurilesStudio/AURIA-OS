@@ -5,7 +5,8 @@ import { useStore } from "@/store/useStore";
 import { SKILLS } from "@/types";
 
 export function RoomManagerPanel() {
-  const rooms = useStore((s) => s.rooms);
+  const activeProjectId = useStore((s) => s.activeProjectId);
+  const rooms = useStore((s) => s.rooms).filter((r) => r.projectId === activeProjectId);
   const addRoom = useStore((s) => s.addRoom);
   const renameRoom = useStore((s) => s.renameRoom);
   const removeRoom = useStore((s) => s.removeRoom);
@@ -36,7 +37,7 @@ export function RoomManagerPanel() {
   };
 
   return (
-    <div className="fixed left-4 bottom-4 z-30">
+    <div className="relative">
       {/* Toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

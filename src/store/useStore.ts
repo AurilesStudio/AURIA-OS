@@ -12,6 +12,7 @@ import type {
   LLMProvider,
   AvatarRole,
   AppearanceEntry,
+  Project,
 } from "@/types";
 import {
   ROOM_SIZE,
@@ -21,32 +22,51 @@ import {
   AGENT_TEMPLATES,
 } from "@/types";
 import { mockGauges, mockActivities, mockProjects } from "@/types/mock-data";
-import { mockAvatars } from "@/types/mock-avatars";
 import { generateId } from "@/lib/utils";
 import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
+
+// ── Default projects ─────────────────────────────────────────
+const defaultProjects: Project[] = [
+  { id: "project-1", name: "Projet #1" },
+];
+
+// Grid origin offset — pushes the room grid away from the camera
+const GRID_ORIGIN_X = 8;
+const GRID_ORIGIN_Z = 0.6;
 
 // ── Default rooms ────────────────────────────────────────────
 const defaultRooms: RoomData[] = [
   {
     id: "room-dev",
     label: "App Development",
-    position: [0, 0, 0],
+    position: [GRID_ORIGIN_X, 0, GRID_ORIGIN_Z],
     borderColor: ROOM_BORDER_COLORS[0],
     skillIds: [],
+    projectId: "project-1",
   },
   {
     id: "room-vps",
     label: "VPS & Infra",
-    position: [ROOM_SPACING_X, 0, 0],
+    position: [GRID_ORIGIN_X + ROOM_SPACING_X, 0, GRID_ORIGIN_Z],
     borderColor: ROOM_BORDER_COLORS[1],
     skillIds: [],
+    projectId: "project-1",
   },
   {
     id: "room-design",
     label: "Design Studio",
-    position: [0, 0, ROOM_SPACING_Z],
+    position: [GRID_ORIGIN_X, 0, GRID_ORIGIN_Z + ROOM_SPACING_Z],
     borderColor: ROOM_BORDER_COLORS[2],
     skillIds: [],
+    projectId: "project-1",
+  },
+  {
+    id: "room-comms",
+    label: "Communication",
+    position: [GRID_ORIGIN_X + ROOM_SPACING_X, 0, GRID_ORIGIN_Z + ROOM_SPACING_Z],
+    borderColor: ROOM_BORDER_COLORS[3],
+    skillIds: [],
+    projectId: "project-1",
   },
 ];
 
@@ -62,14 +82,14 @@ function nextRoomPosition(rooms: RoomData[]): [number, number, number] {
   for (let i = 0; i < 200; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    const x = col * ROOM_SPACING_X;
-    const z = row * ROOM_SPACING_Z;
+    const x = GRID_ORIGIN_X + col * ROOM_SPACING_X;
+    const z = GRID_ORIGIN_Z + row * ROOM_SPACING_Z;
     if (!occupied.has(`${x},${z}`)) {
       return [x, 0, z];
     }
   }
   // Fallback (should never happen)
-  return [rooms.length * ROOM_SPACING_X, 0, 0];
+  return [GRID_ORIGIN_X + rooms.length * ROOM_SPACING_X, 0, GRID_ORIGIN_Z];
 }
 
 // ── AURIA message type ───────────────────────────────────────
@@ -99,20 +119,25 @@ interface AuriaStore {
   commandHistory: CommandHistoryEntry[];
   addCommand: (command: string) => void;
 
-  // Projects
+  // Dashboard projects (legacy)
   projects: ProjectData[];
+
+  // Workspace projects
+  workspaceProjects: Project[];
+  activeProjectId: string;
+  setActiveProjectId: (id: string) => void;
+  addProject: (name: string) => void;
+  renameProject: (projectId: string, name: string) => void;
+  removeProject: (projectId: string) => void;
 
   // AURIA Command Center
   commandCenterOpen: boolean;
   setCommandCenterOpen: (open: boolean) => void;
 
-  // AURIA mascot animation controls
-  auriaClipNames: string[];
-  auriaActiveClip: string;
-  auriaClipRequest: string | null; // set by panel, consumed by mascot
-  setAuriaClipNames: (names: string[]) => void;
-  setAuriaActiveClip: (name: string) => void;
-  requestAuriaClip: (name: string) => void;
+  // Shared animation clip names (loaded from FBX files, shared across all GLB avatars)
+  availableClipNames: string[];
+  setAvailableClipNames: (names: string[]) => void;
+  setAvatarActiveClip: (avatarId: string, clipName: string) => void;
 
   // Skills panel
   skillsPanelOpen: boolean;
@@ -149,7 +174,7 @@ interface AuriaStore {
   selectedAvatarId: string | null;
   selectAvatar: (id: string | null) => void;
   addAvatar: (provider: LLMProvider) => void;
-  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color" | "modelUrl">>) => void;
+  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color" | "modelUrl" | "activeClip">>) => void;
   removeAvatar: (avatarId: string) => void;
   assignAction: (avatarId: string, prompt: string) => void;
   completeAction: (avatarId: string, result: string) => void;
@@ -191,17 +216,57 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
   projects: mockProjects,
 
+  // ── Workspace projects ──────────────────────────────────────
+  workspaceProjects: defaultProjects,
+  activeProjectId: "project-1",
+  setActiveProjectId: (id) => set({ activeProjectId: id }),
+
+  addProject: (name) =>
+    set((state) => {
+      const project: Project = { id: `project-${generateId()}`, name };
+      return {
+        workspaceProjects: [...state.workspaceProjects, project],
+        activeProjectId: project.id,
+      };
+    }),
+
+  renameProject: (projectId, name) =>
+    set((state) => ({
+      workspaceProjects: state.workspaceProjects.map((p) =>
+        p.id === projectId ? { ...p, name } : p,
+      ),
+    })),
+
+  removeProject: (projectId) =>
+    set((state) => {
+      if (state.workspaceProjects.length <= 1) return state;
+      const remaining = state.workspaceProjects.filter((p) => p.id !== projectId);
+      const fallbackId = remaining[0]!.id;
+      return {
+        workspaceProjects: remaining,
+        activeProjectId: state.activeProjectId === projectId ? fallbackId : state.activeProjectId,
+        rooms: state.rooms.map((r) =>
+          r.projectId === projectId ? { ...r, projectId: fallbackId } : r,
+        ),
+        avatars: state.avatars.map((a) =>
+          a.projectId === projectId ? { ...a, projectId: fallbackId } : a,
+        ),
+      };
+    }),
+
   // ── AURIA Command Center ────────────────────────────────────
   commandCenterOpen: false,
   setCommandCenterOpen: (open) => set({ commandCenterOpen: open }),
 
-  // ── AURIA mascot animation ────────────────────────────────
-  auriaClipNames: [],
-  auriaActiveClip: "",
-  auriaClipRequest: null,
-  setAuriaClipNames: (names) => set({ auriaClipNames: names }),
-  setAuriaActiveClip: (name) => set({ auriaActiveClip: name }),
-  requestAuriaClip: (name) => set({ auriaClipRequest: name }),
+  // ── Shared animation clips ────────────────────────────────
+  availableClipNames: [],
+  setAvailableClipNames: (names) => set({ availableClipNames: names }),
+  setAvatarActiveClip: (avatarId, clipName) =>
+    set((state) => ({
+      avatars: state.avatars.map((a) =>
+        a.id === avatarId ? { ...a, activeClip: clipName } : a,
+      ),
+    })),
 
   skillsPanelOpen: false,
   setSkillsPanelOpen: (open) => set({ skillsPanelOpen: open }),
@@ -273,6 +338,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         position: nextRoomPosition(state.rooms),
         borderColor: ROOM_BORDER_COLORS[colorIdx] as string,
         skillIds: [],
+        projectId: state.activeProjectId,
       };
       return { rooms: [...state.rooms, room] };
     }),
@@ -325,13 +391,22 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   setTripoApiKey: (key) => set({ tripoApiKey: key }),
 
   // ── Appearances library ──────────────────────────────────
-  appearances: [{
-    id: "appearance-goku",
-    name: "Goku",
-    thumbnailUrl: "",
-    modelUrl: "/models/goku.glb",
-    createdAt: Date.now(),
-  }],
+  appearances: [
+    {
+      id: "appearance-goku",
+      name: "Goku",
+      thumbnailUrl: "",
+      modelUrl: "/models/goku.glb",
+      createdAt: Date.now(),
+    },
+    {
+      id: "appearance-vegeta",
+      name: "Vegeta",
+      thumbnailUrl: "",
+      modelUrl: "/models/vegeta_tripo.glb",
+      createdAt: Date.now(),
+    },
+  ],
 
   addAppearance: (entry) =>
     set((state) => ({
@@ -392,7 +467,22 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   setAvatarGenerationConsoleOpen: (open) => set({ avatarGenerationConsoleOpen: open }),
 
   // ── Avatar slice ──────────────────────────────────────────
-  avatars: mockAvatars,
+  avatars: [{
+    id: "avatar-auria",
+    name: "Goku",
+    role: "dev" as const,
+    provider: "auria" as const,
+    color: "#ff3c3c",
+    modelUrl: "/models/goku_tripo.glb",
+    activeClip: "Happy Idle",
+    status: "idle" as const,
+    currentAction: null,
+    history: [],
+    position: [GRID_ORIGIN_X - 1.2, 0, GRID_ORIGIN_Z + 0.5],
+    roomId: "room-dev",
+    apiKey: "",
+    projectId: "project-1",
+  }],
   selectedAvatarId: null,
 
   selectAvatar: (id) => set({ selectedAvatarId: id }),
@@ -404,8 +494,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       // Count existing avatars of this provider to generate unique name
       const count = state.avatars.filter((a) => a.provider === provider).length;
       const suffix = count > 0 ? ` ${count + 1}` : "";
-      // Place in the first room
-      const room = state.rooms[0];
+      // Place in the first room of the active project
+      const projectRooms = state.rooms.filter((r) => r.projectId === state.activeProjectId);
+      const room = projectRooms[0] ?? state.rooms[0];
       if (!room) return state;
       const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
       const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
@@ -415,13 +506,15 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         role: template.defaultRole,
         provider: template.provider,
         color: template.color,
-        modelUrl: "",
+        modelUrl: template.defaultModelUrl ?? "",
+        activeClip: "Happy Idle",
         status: "idle",
         currentAction: null,
         history: [],
         position: [room.position[0] + ox, 0, room.position[2] + oz],
         roomId: room.id,
         apiKey: "",
+        projectId: state.activeProjectId,
       };
       return { avatars: [...state.avatars, avatar], selectedAvatarId: avatar.id };
     }),
@@ -546,7 +639,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ];
       return {
         avatars: state.avatars.map((a) =>
-          a.id === avatarId ? { ...a, roomId, position } : a,
+          a.id === avatarId ? { ...a, roomId, position, projectId: room.projectId } : a,
         ),
       };
     }),
@@ -570,35 +663,66 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       provider: a.provider,
       color: a.color,
       modelUrl: a.modelUrl,
+      activeClip: a.activeClip,
       roomId: a.roomId,
       position: a.position,
       apiKey: a.apiKey,
+      projectId: a.projectId,
     })),
+    workspaceProjects: state.workspaceProjects,
+    activeProjectId: state.activeProjectId,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
       id: string; name: string; role: AvatarRole; provider: LLMProvider;
-      color: string; modelUrl?: string; roomId: string; position: [number, number, number]; apiKey: string;
+      color: string; modelUrl?: string; activeClip?: string; roomId: string; position: [number, number, number]; apiKey: string;
+      projectId?: string;
     };
     const saved = persisted as {
       tripoApiKey?: string;
       appearances?: AppearanceEntry[];
       rooms?: RoomData[];
       avatars?: SavedAvatar[];
+      workspaceProjects?: Project[];
+      activeProjectId?: string;
     } | undefined;
     if (!saved) return current;
 
     const tripoApiKey = saved.tripoApiKey ?? current.tripoApiKey;
-    const appearances = saved.appearances && saved.appearances.length > 0
+
+    // Merge workspace projects
+    const savedWsProjects = saved.workspaceProjects && saved.workspaceProjects.length > 0
+      ? saved.workspaceProjects
+      : [];
+    const savedWsProjIds = new Set(savedWsProjects.map((p) => p.id));
+    const missingProjDefaults = current.workspaceProjects.filter((p) => !savedWsProjIds.has(p.id));
+    const workspaceProjects = savedWsProjects.length > 0
+      ? [...savedWsProjects, ...missingProjDefaults]
+      : current.workspaceProjects;
+    const activeProjectId = saved.activeProjectId ?? current.activeProjectId;
+
+    // Merge appearances: restore saved + append any new defaults
+    const savedAppearances = saved.appearances && saved.appearances.length > 0
       ? saved.appearances
+      : [];
+    const savedAppIds = new Set(savedAppearances.map((a) => a.id));
+    const missingAppDefaults = current.appearances.filter((a) => !savedAppIds.has(a.id));
+    const appearances = savedAppearances.length > 0
+      ? [...savedAppearances, ...missingAppDefaults]
       : current.appearances;
 
-    const rooms = saved.rooms && saved.rooms.length > 0
-      ? saved.rooms.map((r) => ({ ...r, skillIds: r.skillIds ?? [] }))
+    // Merge rooms: restore saved rooms + append any new default rooms
+    const savedRooms = saved.rooms && saved.rooms.length > 0
+      ? saved.rooms.map((r) => ({ ...r, skillIds: r.skillIds ?? [], projectId: r.projectId ?? "project-1" }))
+      : [];
+    const savedRoomIds = new Set(savedRooms.map((r) => r.id));
+    const missingDefaults = current.rooms.filter((r) => !savedRoomIds.has(r.id));
+    const rooms = savedRooms.length > 0
+      ? [...savedRooms, ...missingDefaults]
       : current.rooms;
 
     if (!saved.avatars || saved.avatars.length === 0) {
-      return { ...current, tripoApiKey, appearances, rooms };
+      return { ...current, tripoApiKey, appearances, rooms, workspaceProjects, activeProjectId };
     }
 
     // Build map of default avatars for merging
@@ -606,7 +730,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
     // Restore avatars: merge saved fields into defaults when available,
     // or create full avatars for dynamically-added agents
-    const avatars: AvatarData[] = saved.avatars.map((s) => {
+    // Restore saved avatars + append missing defaults
+    const restoredAvatars: AvatarData[] = saved.avatars.map((s) => {
       const base = defaultMap.get(s.id);
       return {
         id: s.id,
@@ -615,15 +740,20 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         provider: s.provider,
         color: s.color,
         modelUrl: s.modelUrl || base?.modelUrl || "",
+        activeClip: s.activeClip || "Happy Idle",
         status: "idle" as const,
         currentAction: null,
         history: [],
         position: s.position,
         roomId: s.roomId,
         apiKey: s.apiKey ?? "",
+        projectId: s.projectId ?? "project-1",
       };
     });
+    const savedAvatarIds = new Set(restoredAvatars.map((a) => a.id));
+    const missingAvatarDefaults = current.avatars.filter((a) => !savedAvatarIds.has(a.id));
+    const avatars = [...restoredAvatars, ...missingAvatarDefaults];
 
-    return { ...current, tripoApiKey, appearances, rooms, avatars };
+    return { ...current, tripoApiKey, appearances, rooms, avatars, workspaceProjects, activeProjectId };
   },
 }));

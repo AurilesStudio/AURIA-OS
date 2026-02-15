@@ -3,7 +3,8 @@ import { useDragAvatar } from "@/hooks/useDragAvatar";
 import { AvatarModel } from "./AvatarModel";
 
 export function AvatarGroup() {
-  const avatars = useStore((s) => s.avatars);
+  const activeProjectId = useStore((s) => s.activeProjectId);
+  const avatars = useStore((s) => s.avatars).filter((a) => a.projectId === activeProjectId);
   const rooms = useStore((s) => s.rooms);
   const {
     handlePointerDown,

@@ -1,71 +1,158 @@
 import { useRef, useMemo, useEffect } from "react";
-import { useGLTF, useAnimations } from "@react-three/drei";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { Group } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { AvatarData } from "@/types";
+import { ROOM_SIZE } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
 import { AvatarGlow } from "./AvatarGlow";
 import { AvatarLabel } from "./AvatarLabel";
+import {
+  buildBoneMap,
+  retargetClip,
+  getBindPoseQuaternions,
+  getBoneNamesFromClips,
+  getBoneNamesFromScene,
+} from "@/lib/animationRetarget";
 
 // ── Constants ──────────────────────────────────────────────────
-const TARGET_HEIGHT = 1.45; // match procedural avatar approx height
+const TARGET_HEIGHT = 1.45;
+const ANIM_URLS = ["/animations/happy-idle.fbx", "/animations/walking.fbx"];
+const ANIM_NAMES = ["Happy Idle", "Walking"];
+const WALK_SPEED = 1.2;
+const PATROL_MARGIN = 1.5;
 
 interface AvatarModelProps {
   avatar: AvatarData;
   onDragStart?: (avatarId: string, e: ThreeEvent<PointerEvent>) => void;
 }
 
-// ── GLB avatar with auto-fit + idle animation ────────────────
-
-function GltfAvatar({ url }: { url: string }) {
+// ── GLB avatar with FBX retargeted animations ────────────────
+function GltfAvatar({ url, avatarId }: { url: string; avatarId: string }) {
   const gltf = useGLTF(url);
+  const fbxFiles = ANIM_URLS.map((u) => useLoader(FBXLoader, u));
   const groupRef = useRef<Group>(null);
+  const activeRef = useRef<THREE.AnimationAction | null>(null);
+  const activeClip = useStore((s) => s.avatars.find((a) => a.id === avatarId)?.activeClip ?? "");
+  const setAvailableClipNames = useStore((s) => s.setAvailableClipNames);
+  const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
 
-  const clone = useMemo(() => {
+  const { mixer, actionMap, clipNames, scene } = useMemo(() => {
     const c = cloneSkeleton(gltf.scene) as Group;
 
-    // Auto-fit: compute bounds, scale to target height, place feet on ground
+    c.traverse((obj) => {
+      if ((obj as THREE.SkinnedMesh).isSkinnedMesh) {
+        const sm = obj as THREE.SkinnedMesh;
+        sm.frustumCulled = false;
+        if (!sm.skeleton.boneTexture) {
+          sm.skeleton.computeBoneTexture();
+        }
+      }
+    });
+
+    // Auto-fit
     const box = new THREE.Box3().setFromObject(c);
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 0) {
-      c.scale.multiplyScalar(TARGET_HEIGHT / maxDim);
-    }
-
+    if (maxDim > 0) c.scale.multiplyScalar(TARGET_HEIGHT / maxDim);
     const fitted = new THREE.Box3().setFromObject(c);
     const center = fitted.getCenter(new THREE.Vector3());
-
     c.position.x -= center.x;
     c.position.z -= center.z;
     c.position.y -= fitted.min.y;
 
-    return c;
-  }, [gltf.scene]);
+    // Collect bone info
+    const targetBones = getBoneNamesFromScene(c);
+    const targetBindPose = getBindPoseQuaternions(c);
 
-  // Play first (idle) animation if present
-  const { actions } = useAnimations(gltf.animations, groupRef);
+    const allSourceClips: THREE.AnimationClip[] = [];
+    let sourceBindPose = new Map<string, THREE.Quaternion>();
+    for (const fbx of fbxFiles) {
+      allSourceClips.push(...fbx.animations);
+      if (sourceBindPose.size === 0) {
+        sourceBindPose = getBindPoseQuaternions(fbx);
+      }
+    }
 
+    if (allSourceClips.length === 0) {
+      return {
+        mixer: new THREE.AnimationMixer(c),
+        actionMap: {} as Record<string, THREE.AnimationAction>,
+        clipNames: [] as string[],
+        scene: c,
+      };
+    }
+
+    const sourceBones = getBoneNamesFromClips(allSourceClips);
+    const boneMap = buildBoneMap(sourceBones, targetBones);
+
+    const mixer = new THREE.AnimationMixer(c);
+    const map: Record<string, THREE.AnimationAction> = {};
+    const names: string[] = [];
+
+    allSourceClips.forEach((clip, i) => {
+      const displayName = ANIM_NAMES[i] ?? clip.name;
+      const remapped = retargetClip(clip, boneMap, sourceBindPose, targetBindPose, displayName);
+      if (remapped.tracks.length > 0) {
+        map[displayName] = mixer.clipAction(remapped);
+        names.push(displayName);
+      }
+    });
+
+    return { mixer, actionMap: map, clipNames: names, scene: c };
+  }, [gltf.scene, ...fbxFiles]);
+
+  // Publish available clip names (shared across all avatars)
   useEffect(() => {
-    const names = Object.keys(actions);
-    const idle =
-      names.find((n) => /idle/i.test(n)) ??
-      names.find((n) => /stand/i.test(n)) ??
-      names[0] ??
-      null;
-    if (!idle) return;
-    const action = actions[idle];
-    action?.reset().fadeIn(0.3).play();
+    if (clipNames.length > 0) {
+      setAvailableClipNames(clipNames);
+    }
+  }, [clipNames, setAvailableClipNames]);
+
+  // Play stored clip (or first clip) on mount
+  useEffect(() => {
+    if (clipNames.length === 0) return;
+    const target = activeClip && actionMap[activeClip] ? activeClip : clipNames[0]!;
+    const action = actionMap[target]!;
+    action.play();
+    activeRef.current = action;
+    if (target !== activeClip) setAvatarActiveClip(avatarId, target);
     return () => {
-      action?.fadeOut(0.3);
+      mixer.stopAllAction();
+      activeRef.current = null;
     };
-  }, [actions]);
+  }, [mixer, actionMap, clipNames, avatarId, setAvatarActiveClip]);
+
+  // React to activeClip changes (from info panel)
+  useEffect(() => {
+    if (!activeClip) return;
+    const newAction = actionMap[activeClip];
+    if (!newAction) return;
+
+    const oldAction = activeRef.current;
+    if (oldAction && oldAction !== newAction) {
+      newAction.reset();
+      newAction.play();
+      newAction.crossFadeFrom(oldAction, 0.5);
+    } else if (!oldAction) {
+      newAction.play();
+    }
+
+    activeRef.current = newAction;
+  }, [activeClip, actionMap]);
+
+  useFrame((_, delta) => {
+    mixer.update(delta);
+  });
 
   return (
     <group ref={groupRef}>
-      <primitive object={clone} />
+      <primitive object={scene} />
     </group>
   );
 }
@@ -183,10 +270,61 @@ function ProceduralAvatar({
 export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const groupRef = useRef<Group>(null);
   const selectedAvatarId = useStore((s) => s.selectedAvatarId);
+  const rooms = useStore((s) => s.rooms);
 
   const isSelected = selectedAvatarId === avatar.id;
+  const isWalking = avatar.activeClip === "Walking";
 
   useAvatarAction(avatar.id);
+
+  // Patrol state
+  const patrol = useRef({
+    targetX: 0,
+    targetZ: 0,
+    needsNewTarget: true,
+  });
+
+  // Reset patrol when clip changes
+  useEffect(() => {
+    patrol.current.needsNewTarget = true;
+  }, [avatar.activeClip]);
+
+  // Get room bounds for patrol
+  const room = rooms.find((r) => r.id === avatar.roomId);
+
+  const pickNewTarget = () => {
+    if (!room) return;
+    const halfW = ROOM_SIZE.width / 2 - PATROL_MARGIN;
+    const halfD = ROOM_SIZE.depth / 2 - PATROL_MARGIN;
+    patrol.current.targetX = room.position[0] + (Math.random() - 0.5) * 2 * halfW;
+    patrol.current.targetZ = room.position[2] + (Math.random() - 0.5) * 2 * halfD;
+    patrol.current.needsNewTarget = false;
+  };
+
+  // Locomotion when walking
+  useFrame((_, delta) => {
+    if (!groupRef.current || !isWalking || !room) return;
+
+    const p = patrol.current;
+    if (p.needsNewTarget) pickNewTarget();
+
+    const pos = groupRef.current.position;
+    const dx = p.targetX - pos.x;
+    const dz = p.targetZ - pos.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < 0.15) {
+      pickNewTarget();
+      return;
+    }
+
+    const step = Math.min(WALK_SPEED * delta, dist);
+    pos.x += (dx / dist) * step;
+    pos.z += (dz / dist) * step;
+
+    // Face movement direction
+    groupRef.current.rotation.y = Math.atan2(dx, dz);
+  });
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
@@ -203,7 +341,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     <group position={avatar.position}>
       <group ref={groupRef} onPointerDown={handlePointerDown}>
         {avatar.modelUrl ? (
-          <GltfAvatar url={avatar.modelUrl} />
+          <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} />
         ) : (
           <ProceduralAvatar color={outfit} skin={skin} ei={ei} />
         )}

@@ -3,7 +3,7 @@
 export type AvatarRole = "dev" | "designer" | "pm";
 export type AvatarStatus = "idle" | "working" | "success" | "error";
 
-export type LLMProvider = "claude" | "gemini" | "mistral";
+export type LLMProvider = "auria" | "claude" | "gemini" | "mistral";
 
 export interface AvatarAction {
   id: string;
@@ -21,12 +21,14 @@ export interface AvatarData {
   provider: LLMProvider;
   color: string;
   modelUrl: string;
+  activeClip: string;
   status: AvatarStatus;
   currentAction: AvatarAction | null;
   history: AvatarAction[];
   position: [x: number, y: number, z: number];
   roomId: string;
   apiKey: string;
+  projectId: string;
 }
 
 /** Catalog entry shown in the Recruit modal */
@@ -36,12 +38,13 @@ export interface AgentTemplate {
   defaultName: string;
   color: string;
   defaultRole: AvatarRole;
+  defaultModelUrl: string;
 }
 
 export const AGENT_TEMPLATES: AgentTemplate[] = [
-  { provider: "claude", label: "Claude (Anthropic)", defaultName: "Claude", color: "#bf00ff", defaultRole: "dev" },
-  { provider: "gemini", label: "Gemini (Google)", defaultName: "Gemini", color: "#ff003c", defaultRole: "designer" },
-  { provider: "mistral", label: "Mistral", defaultName: "Mistral", color: "#ff2d7a", defaultRole: "pm" },
+  { provider: "claude", label: "Vegeta", defaultName: "Vegeta", color: "#3c5eff", defaultRole: "dev", defaultModelUrl: "/models/vegeta_tripo.glb" },
+  { provider: "gemini", label: "Gohan", defaultName: "Gohan", color: "#ff9f0a", defaultRole: "designer", defaultModelUrl: "/models/gohan_test.glb" },
+  { provider: "mistral", label: "Auria", defaultName: "Auria", color: "#ff2d7a", defaultRole: "pm", defaultModelUrl: "/models/auria.glb" },
 ];
 
 // ── Skill Types ──────────────────────────────────────────────
@@ -72,6 +75,7 @@ export interface RoomData {
   position: [x: number, y: number, z: number];
   borderColor: string;
   skillIds: string[];
+  projectId: string;
 }
 
 /** All rooms share the same footprint */
@@ -102,9 +106,10 @@ export const AVATAR_ROLE_LABELS: Record<AvatarRole, string> = {
 };
 
 export const AVATAR_PROVIDER_LABELS: Record<LLMProvider, string> = {
-  claude: "Claude (Anthropic)",
-  gemini: "Gemini (Google)",
-  mistral: "Mistral",
+  auria: "AURIA (System)",
+  claude: "Vegeta",
+  gemini: "Gohan",
+  mistral: "Auria",
 };
 
 export const AVATAR_COLORS: Record<AvatarRole, string> = {
@@ -112,3 +117,10 @@ export const AVATAR_COLORS: Record<AvatarRole, string> = {
   designer: "#ff003c",
   pm: "#ff2d7a",
 };
+
+// ── Project Types ─────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  name: string;
+}

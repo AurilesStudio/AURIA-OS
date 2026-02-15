@@ -1,5 +1,6 @@
 import { useRef, useMemo, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Line, Text } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import { SKILLS } from "@/types";
 import * as THREE from "three";
@@ -514,9 +515,58 @@ function SkillsPanel() {
   );
 }
 
+const ADMIN_FRAME_COLOR = "#ff3c3c";
+const ADMIN_LABEL_COLOR = "#ff8080";
+
+/** Floor frame around the Command Center + Skills cabinet */
+function AdminFrame() {
+  const y = 0.005;
+  // Bounding box covering both objects (screen Z ≈ -4…14, cabinet Z ≈ 17…21)
+  const x0 = -9.5, x1 = -5;
+  const z0 = -5, z1 = 22;
+  const pad = 1.2;
+
+  const outline: [number, number, number][] = [
+    [x0 - pad, y, z0 - pad],
+    [x1 + pad, y, z0 - pad],
+    [x1 + pad, y, z1 + pad],
+    [x0 - pad, y, z1 + pad],
+    [x0 - pad, y, z0 - pad],
+  ];
+
+  const labelPos: [number, number, number] = [x1 + pad - 0.6, 0.006, z0 - pad - 0.35];
+
+  return (
+    <group>
+      <Line
+        points={outline}
+        color={ADMIN_FRAME_COLOR}
+        lineWidth={1}
+        transparent
+        opacity={0.25}
+      />
+      <Text
+        position={labelPos}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.42}
+        color={ADMIN_LABEL_COLOR}
+        anchorX="right"
+        anchorY="bottom"
+        fillOpacity={0.7}
+        letterSpacing={0.08}
+      >
+        ADMIN
+        <meshBasicMaterial color={ADMIN_LABEL_COLOR} transparent opacity={0.7} />
+      </Text>
+    </group>
+  );
+}
+
 export function SceneProps() {
   return (
     <group>
+      {/* Admin zone frame */}
+      <AdminFrame />
       {/* AURIA Command Center — giant screen, left side */}
       <CommandCenterScreen />
       {/* Skills panel — right of the screen */}

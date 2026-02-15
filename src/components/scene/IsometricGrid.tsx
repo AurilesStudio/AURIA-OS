@@ -3,6 +3,7 @@ import { Line, Text } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import type { RoomData } from "@/types";
 import { ROOM_SIZE, ROOM_FLOOR_COLOR, ROOM_FLOOR_OPACITY } from "@/types";
+import type { Project } from "@/types";
 
 const hw = ROOM_SIZE.width / 2;
 const hd = ROOM_SIZE.depth / 2;
@@ -64,12 +65,74 @@ function IsometricRoom({ room }: { room: RoomData }) {
   );
 }
 
-/** Renders all rooms from the store */
-export function IsometricRooms() {
-  const rooms = useStore((s) => s.rooms);
+const FRAME_PADDING = 2.8;
+const FRAME_COLOR = "#a855f7";
+const FRAME_LABEL_COLOR = "#e0c0ff";
+const FRAME_OPACITY = 0.25;
+
+/** Bounding frame around all rooms of a project */
+function ProjectFrame({ rooms, project }: { rooms: RoomData[]; project: Project }) {
+  const points = useMemo(() => {
+    if (rooms.length === 0) return null;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const r of rooms) {
+      minX = Math.min(minX, r.position[0] - hw);
+      maxX = Math.max(maxX, r.position[0] + hw);
+      minZ = Math.min(minZ, r.position[2] - hd);
+      maxZ = Math.max(maxZ, r.position[2] + hd);
+    }
+    const pad = FRAME_PADDING;
+    const x0 = minX - pad, x1 = maxX + pad;
+    const z0 = minZ - pad, z1 = maxZ + pad;
+    const y = 0.005;
+    return {
+      outline: [
+        [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [x0, y, z0],
+      ] as [number, number, number][],
+      labelPos: [x0 + 0.6, 0.006, z0 - 0.35] as [number, number, number],
+    };
+  }, [rooms]);
+
+  if (!points) return null;
 
   return (
     <group>
+      <Line
+        points={points.outline}
+        color={FRAME_COLOR}
+        lineWidth={1}
+        transparent
+        opacity={FRAME_OPACITY}
+        linewidth={1}
+      />
+      <Text
+        position={points.labelPos}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.42}
+        color={FRAME_LABEL_COLOR}
+        anchorX="left"
+        anchorY="bottom"
+        fillOpacity={0.7}
+        letterSpacing={0.08}
+      >
+        {project.name.toUpperCase()}
+        <meshBasicMaterial color={FRAME_LABEL_COLOR} transparent opacity={0.7} />
+      </Text>
+    </group>
+  );
+}
+
+/** Renders all rooms from the store (filtered by active project) */
+export function IsometricRooms() {
+  const activeProjectId = useStore((s) => s.activeProjectId);
+  const rooms = useStore((s) => s.rooms).filter((r) => r.projectId === activeProjectId);
+  const project = useStore((s) => s.workspaceProjects.find((p) => p.id === s.activeProjectId));
+
+  return (
+    <group>
+      {project && rooms.length > 0 && (
+        <ProjectFrame rooms={rooms} project={project} />
+      )}
       {rooms.map((room) => (
         <IsometricRoom key={room.id} room={room} />
       ))}

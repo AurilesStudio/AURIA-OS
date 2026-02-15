@@ -8,7 +8,8 @@ import { AvatarGenerationConsole } from "@/components/scene/AvatarGenerationCons
 import { AuriaCommandPanel } from "@/components/scene/AuriaCommandPanel";
 import { SkillsAssignmentPanel } from "@/components/scene/SkillsAssignmentPanel";
 import { useStore } from "@/store/useStore";
-import { UserPlus, Box } from "lucide-react";
+import { ProjectSelector } from "@/components/scene/ProjectSelector";
+import { UserPlus } from "lucide-react";
 
 export default function App() {
   const [recruitOpen, setRecruitOpen] = useState(false);
@@ -32,26 +33,18 @@ export default function App() {
       {/* z-30 — Avatar info / settings panel (slides in on selection) */}
       <AvatarInfoPanel />
 
-      {/* z-30 — Room management panel */}
-      <RoomManagerPanel />
-
-      {/* z-30 — Recruit agent button (next to Rooms) */}
-      <button
-        onClick={() => setRecruitOpen(true)}
-        className="fixed bottom-4 left-36 z-30 overlay-glass flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-text-muted transition-colors hover:text-text-primary"
-      >
-        <UserPlus className="h-3.5 w-3.5" />
-        Recruit Agent
-      </button>
-
-      {/* z-30 — Avatar Studio button */}
-      <button
-        onClick={() => setGenerationConsoleOpen(true)}
-        className="fixed bottom-4 left-64 z-30 overlay-glass flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-text-muted transition-colors hover:text-text-primary"
-      >
-        <Box className="h-3.5 w-3.5" />
-        Avatar Studio
-      </button>
+      {/* z-30 — Bottom bar: Project selector + Room management + Recruit agent */}
+      <div className="fixed bottom-4 left-4 z-30 flex items-end gap-2">
+        <ProjectSelector />
+        <RoomManagerPanel />
+        <button
+          onClick={() => setRecruitOpen(true)}
+          className="overlay-glass flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-text-muted transition-colors hover:text-text-primary"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          Recruit Agent
+        </button>
+      </div>
 
       {/* z-40 — Recruit modal */}
       <RecruitAgentModal open={recruitOpen} onClose={() => setRecruitOpen(false)} />

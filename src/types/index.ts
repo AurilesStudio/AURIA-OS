@@ -58,6 +58,7 @@ export type {
   RoomData,
   AgentTemplate,
   SkillData,
+  Project,
 } from "./avatar";
 
 export {

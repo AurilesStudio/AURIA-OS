@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Cpu, Clock, ArrowRightLeft, Eye, EyeOff,
-  Trash2, KeyRound, Settings, Activity, Box,
+  Trash2, KeyRound, Settings, Activity, Box, Play,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
@@ -17,12 +17,16 @@ type Tab = "settings" | "activity";
 
 export function AvatarInfoPanel() {
   const { selectedAvatar, select } = useAvatar();
+  const activeProjectId = useStore((s) => s.activeProjectId);
   const rooms = useStore((s) => s.rooms);
+  const projectRooms = rooms.filter((r) => r.projectId === activeProjectId);
   const moveAvatarToRoom = useStore((s) => s.moveAvatarToRoom);
   const updateAvatar = useStore((s) => s.updateAvatar);
   const removeAvatar = useStore((s) => s.removeAvatar);
   const appearances = useStore((s) => s.appearances);
   const setAvatarGenerationConsoleOpen = useStore((s) => s.setAvatarGenerationConsoleOpen);
+  const availableClipNames = useStore((s) => s.availableClipNames);
+  const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
@@ -265,33 +269,68 @@ export function AvatarInfoPanel() {
                     )}
                   </div>
 
-                  {/* Move to room */}
-                  {rooms.filter((r) => r.id !== selectedAvatar.roomId).length > 0 && (
-                    <div>
-                      <div className="mb-1.5 flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                        <ArrowRightLeft className="h-2.5 w-2.5" />
-                        Move to
-                      </div>
+                  {/* Animation clips (only for GLB avatars) */}
+                  {selectedAvatar.modelUrl && availableClipNames.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                        <Play className="h-2.5 w-2.5" />
+                        Animation
+                      </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {rooms
-                          .filter((r) => r.id !== selectedAvatar.roomId)
-                          .map((room) => (
-                            <button
-                              key={room.id}
-                              onClick={() => moveAvatarToRoom(selectedAvatar.id, room.id)}
-                              className="rounded px-2 py-1 text-[10px] font-medium transition-colors hover:brightness-125"
+                        {availableClipNames.map((clipName) => (
+                          <button
+                            key={clipName}
+                            onClick={() => setAvatarActiveClip(selectedAvatar.id, clipName)}
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors"
+                            style={{
+                              backgroundColor:
+                                selectedAvatar.activeClip === clipName
+                                  ? `${selectedAvatar.color}20`
+                                  : "rgba(255,255,255,0.03)",
+                              border:
+                                selectedAvatar.activeClip === clipName
+                                  ? `1px solid ${selectedAvatar.color}60`
+                                  : "1px solid rgba(255,255,255,0.08)",
+                              color:
+                                selectedAvatar.activeClip === clipName
+                                  ? selectedAvatar.color
+                                  : "#999",
+                            }}
+                          >
+                            <Play
+                              className="h-2.5 w-2.5"
                               style={{
-                                backgroundColor: `${room.borderColor}20`,
-                                color: room.borderColor,
-                                border: `1px solid ${room.borderColor}40`,
+                                fill:
+                                  selectedAvatar.activeClip === clipName
+                                    ? selectedAvatar.color
+                                    : "transparent",
                               }}
-                            >
-                              {room.label}
-                            </button>
-                          ))}
+                            />
+                            {clipName}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Room */}
+                  <label className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <ArrowRightLeft className="h-2.5 w-2.5" />
+                      Room
+                    </span>
+                    <select
+                      value={selectedAvatar.roomId}
+                      onChange={(e) => moveAvatarToRoom(selectedAvatar.id, e.target.value)}
+                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
+                    >
+                      {projectRooms.map((room) => (
+                        <option key={room.id} value={room.id}>
+                          {room.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
                   {/* Save / Cancel / Delete */}
                   <div className="mt-1 flex items-center gap-2">
