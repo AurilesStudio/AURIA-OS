@@ -73,3 +73,5 @@ export {
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
 } from "./avatar";
+
+export type { AppearanceEntry } from "./appearance";

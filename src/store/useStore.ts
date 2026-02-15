@@ -11,6 +11,7 @@ import type {
   RoomData,
   LLMProvider,
   AvatarRole,
+  AppearanceEntry,
 } from "@/types";
 import {
   ROOM_SIZE,
@@ -22,6 +23,7 @@ import {
 import { mockGauges, mockActivities, mockProjects } from "@/types/mock-data";
 import { mockAvatars } from "@/types/mock-avatars";
 import { generateId } from "@/lib/utils";
+import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
 
 // ── Default rooms ────────────────────────────────────────────
 const defaultRooms: RoomData[] = [
@@ -104,6 +106,14 @@ interface AuriaStore {
   commandCenterOpen: boolean;
   setCommandCenterOpen: (open: boolean) => void;
 
+  // AURIA mascot animation controls
+  auriaClipNames: string[];
+  auriaActiveClip: string;
+  auriaClipRequest: string | null; // set by panel, consumed by mascot
+  setAuriaClipNames: (names: string[]) => void;
+  setAuriaActiveClip: (name: string) => void;
+  requestAuriaClip: (name: string) => void;
+
   // Skills panel
   skillsPanelOpen: boolean;
   setSkillsPanelOpen: (open: boolean) => void;
@@ -117,12 +127,29 @@ interface AuriaStore {
   removeRoom: (roomId: string) => void;
   toggleRoomSkill: (roomId: string, skillId: string) => void;
 
+  // Tripo3D
+  tripoApiKey: string;
+  setTripoApiKey: (key: string) => void;
+
+  // Appearances library
+  appearances: AppearanceEntry[];
+  addAppearance: (entry: Omit<AppearanceEntry, "id" | "createdAt">) => void;
+  updateAppearance: (id: string, data: Partial<AppearanceEntry>) => void;
+  removeAppearance: (id: string) => void;
+
+  // Local GLB hydration (IndexedDB → blob URLs on app start)
+  hydrateLocalGlbs: () => Promise<void>;
+
+  // Avatar Generation Console
+  avatarGenerationConsoleOpen: boolean;
+  setAvatarGenerationConsoleOpen: (open: boolean) => void;
+
   // Avatars
   avatars: AvatarData[];
   selectedAvatarId: string | null;
   selectAvatar: (id: string | null) => void;
   addAvatar: (provider: LLMProvider) => void;
-  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color">>) => void;
+  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color" | "modelUrl">>) => void;
   removeAvatar: (avatarId: string) => void;
   assignAction: (avatarId: string, prompt: string) => void;
   completeAction: (avatarId: string, result: string) => void;
@@ -168,6 +195,14 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   commandCenterOpen: false,
   setCommandCenterOpen: (open) => set({ commandCenterOpen: open }),
 
+  // ── AURIA mascot animation ────────────────────────────────
+  auriaClipNames: [],
+  auriaActiveClip: "",
+  auriaClipRequest: null,
+  setAuriaClipNames: (names) => set({ auriaClipNames: names }),
+  setAuriaActiveClip: (name) => set({ auriaActiveClip: name }),
+  requestAuriaClip: (name) => set({ auriaClipRequest: name }),
+
   skillsPanelOpen: false,
   setSkillsPanelOpen: (open) => set({ skillsPanelOpen: open }),
 
@@ -198,7 +233,20 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         timestamp: new Date(),
       };
 
+      // Dispatch action to targeted agent(s) — sets them to "working"
+      const targets = targetAgent
+        ? state.avatars.filter((a) => a.id === targetAgent)
+        : state.avatars;
+      const action = { id: generateId(), prompt: text, startedAt: new Date() };
+      const targetIds = new Set(targets.map((a) => a.id));
+      const avatars = state.avatars.map((a) =>
+        targetIds.has(a.id) && a.status === "idle"
+          ? { ...a, status: "working" as const, currentAction: action }
+          : a,
+      );
+
       return {
+        avatars,
         auriaMessages: [...state.auriaMessages, userMsg, auriaMsg],
         activities: [
           ...state.activities,
@@ -271,6 +319,77 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         ),
       };
     }),
+
+  // ── Tripo3D ────────────────────────────────────────────────
+  tripoApiKey: "",
+  setTripoApiKey: (key) => set({ tripoApiKey: key }),
+
+  // ── Appearances library ──────────────────────────────────
+  appearances: [{
+    id: "appearance-goku",
+    name: "Goku",
+    thumbnailUrl: "",
+    modelUrl: "/models/goku.glb",
+    createdAt: Date.now(),
+  }],
+
+  addAppearance: (entry) =>
+    set((state) => ({
+      appearances: [
+        ...state.appearances,
+        { ...entry, id: `appearance-${generateId()}`, createdAt: Date.now() },
+      ],
+    })),
+
+  updateAppearance: (id, data) =>
+    set((state) => ({
+      appearances: state.appearances.map((a) =>
+        a.id === id ? { ...a, ...data } : a,
+      ),
+    })),
+
+  removeAppearance: (id) => {
+    // Clean up IndexedDB if local GLB
+    const app = useStore.getState().appearances.find((a) => a.id === id);
+    if (app?.localGlb) {
+      deleteGlbFile(id).catch(() => {});
+      // Revoke blob URL to free memory
+      if (app.modelUrl.startsWith("blob:")) URL.revokeObjectURL(app.modelUrl);
+    }
+    set((state) => ({
+      appearances: state.appearances.filter((a) => a.id !== id),
+    }));
+  },
+
+  // ── Local GLB hydration ─────────────────────────────────
+  hydrateLocalGlbs: async () => {
+    const { appearances } = useStore.getState();
+    const locals = appearances.filter((a) => a.localGlb);
+    if (locals.length === 0) return;
+
+    const updates: { id: string; modelUrl: string }[] = [];
+    await Promise.all(
+      locals.map(async (a) => {
+        const buffer = await loadGlbFile(a.id).catch(() => null);
+        if (buffer) {
+          updates.push({ id: a.id, modelUrl: bufferToBlobUrl(buffer) });
+        }
+      }),
+    );
+
+    if (updates.length > 0) {
+      set((state) => ({
+        appearances: state.appearances.map((a) => {
+          const u = updates.find((x) => x.id === a.id);
+          return u ? { ...a, modelUrl: u.modelUrl } : a;
+        }),
+      }));
+    }
+  },
+
+  // ── Avatar Generation Console ────────────────────────────
+  avatarGenerationConsoleOpen: false,
+  setAvatarGenerationConsoleOpen: (open) => set({ avatarGenerationConsoleOpen: open }),
 
   // ── Avatar slice ──────────────────────────────────────────
   avatars: mockAvatars,
@@ -441,6 +560,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 }), {
   name: "auria-store",
   partialize: (state) => ({
+    tripoApiKey: state.tripoApiKey,
+    appearances: state.appearances,
     rooms: state.rooms,
     avatars: state.avatars.map((a) => ({
       id: a.id,
@@ -448,6 +569,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       role: a.role,
       provider: a.provider,
       color: a.color,
+      modelUrl: a.modelUrl,
       roomId: a.roomId,
       position: a.position,
       apiKey: a.apiKey,
@@ -456,20 +578,27 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   merge: (persisted, current) => {
     type SavedAvatar = {
       id: string; name: string; role: AvatarRole; provider: LLMProvider;
-      color: string; roomId: string; position: [number, number, number]; apiKey: string;
+      color: string; modelUrl?: string; roomId: string; position: [number, number, number]; apiKey: string;
     };
     const saved = persisted as {
+      tripoApiKey?: string;
+      appearances?: AppearanceEntry[];
       rooms?: RoomData[];
       avatars?: SavedAvatar[];
     } | undefined;
     if (!saved) return current;
+
+    const tripoApiKey = saved.tripoApiKey ?? current.tripoApiKey;
+    const appearances = saved.appearances && saved.appearances.length > 0
+      ? saved.appearances
+      : current.appearances;
 
     const rooms = saved.rooms && saved.rooms.length > 0
       ? saved.rooms.map((r) => ({ ...r, skillIds: r.skillIds ?? [] }))
       : current.rooms;
 
     if (!saved.avatars || saved.avatars.length === 0) {
-      return { ...current, rooms };
+      return { ...current, tripoApiKey, appearances, rooms };
     }
 
     // Build map of default avatars for merging
@@ -485,7 +614,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         role: s.role,
         provider: s.provider,
         color: s.color,
-        modelUrl: base?.modelUrl ?? "",
+        modelUrl: s.modelUrl || base?.modelUrl || "",
         status: "idle" as const,
         currentAction: null,
         history: [],
@@ -495,6 +624,6 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       };
     });
 
-    return { ...current, rooms, avatars };
+    return { ...current, tripoApiKey, appearances, rooms, avatars };
   },
 }));

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { MapControls } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
@@ -6,6 +7,7 @@ import { IsometricRooms } from "./IsometricGrid";
 import { AvatarGroup } from "./AvatarGroup";
 import { SceneParticles } from "./SceneParticles";
 import { SceneProps } from "./SceneProps";
+import { AuriaMascot } from "./AuriaMascot";
 
 export function IsometricScene() {
   const selectAvatar = useStore((s) => s.selectAvatar);
@@ -47,7 +49,10 @@ export function IsometricScene() {
         <SceneParticles />
         <IsometricRooms />
         <SceneProps />
-        <AvatarGroup />
+        <Suspense fallback={null}>
+          <AvatarGroup />
+          <AuriaMascot />
+        </Suspense>
       </Canvas>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Cpu, Clock, ArrowRightLeft, Eye, EyeOff,
-  Trash2, KeyRound, Settings, Activity,
+  Trash2, KeyRound, Settings, Activity, Box,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
@@ -21,6 +21,8 @@ export function AvatarInfoPanel() {
   const moveAvatarToRoom = useStore((s) => s.moveAvatarToRoom);
   const updateAvatar = useStore((s) => s.updateAvatar);
   const removeAvatar = useStore((s) => s.removeAvatar);
+  const appearances = useStore((s) => s.appearances);
+  const setAvatarGenerationConsoleOpen = useStore((s) => s.setAvatarGenerationConsoleOpen);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
@@ -194,6 +196,73 @@ export function AvatarInfoPanel() {
                     >
                       {selectedAvatar.status}
                     </span>
+                  </div>
+
+                  {/* ── Appearance Picker ──────── */}
+                  <div className="flex flex-col gap-2 rounded border border-white/5 bg-bg-base/30 p-2">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                        <Box className="h-2.5 w-2.5" />
+                        Appearance
+                      </span>
+                      <button
+                        onClick={() => setAvatarGenerationConsoleOpen(true)}
+                        className="text-[10px] text-text-muted transition-colors hover:text-text-primary"
+                      >
+                        Open Studio
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {/* Default (procedural) option */}
+                      <button
+                        onClick={() => updateAvatar(selectedAvatar.id, { modelUrl: "" })}
+                        className={`flex flex-col items-center gap-1 rounded border px-1.5 py-2 text-center transition-colors ${
+                          !selectedAvatar.modelUrl
+                            ? "border-white/20 bg-white/5"
+                            : "border-white/5 hover:border-white/15"
+                        }`}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center">
+                          <Cpu className="h-4 w-4 text-text-muted" />
+                        </div>
+                        <span className="text-[9px] text-text-muted">Default</span>
+                      </button>
+
+                      {/* Library entries */}
+                      {appearances.map((app) => (
+                        <button
+                          key={app.id}
+                          onClick={() => updateAvatar(selectedAvatar.id, { modelUrl: app.modelUrl })}
+                          className={`flex flex-col items-center gap-1 rounded border px-1.5 py-2 text-center transition-colors ${
+                            selectedAvatar.modelUrl === app.modelUrl
+                              ? "border-white/20 bg-white/5"
+                              : "border-white/5 hover:border-white/15"
+                          }`}
+                        >
+                          {app.thumbnailUrl ? (
+                            <img
+                              src={app.thumbnailUrl}
+                              alt={app.name}
+                              className="h-8 w-8 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center">
+                              <Box className="h-4 w-4 text-text-muted" />
+                            </div>
+                          )}
+                          <span className="text-[9px] text-text-muted truncate w-full">
+                            {app.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {appearances.length === 0 && (
+                      <p className="text-center text-[10px] text-text-muted">
+                        No appearances. Open Studio to generate.
+                      </p>
+                    )}
                   </div>
 
                   {/* Move to room */}
