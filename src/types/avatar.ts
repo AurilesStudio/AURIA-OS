@@ -85,12 +85,15 @@ export const ROOM_FLOOR_OPACITY = 0.6;
 
 /** Palette cycled when creating new rooms */
 export const ROOM_BORDER_COLORS = [
-  "#ff3c3c",
-  "#3caaff",
-  "#ff2d7a",
-  "#a855f7",
-  "#22d3ee",
-  "#facc15",
+  "#ffffff",
+  "#ffff00",
+  "#00ff00",
+  "#0080ff",
+  "#ff0000",
+  "#ff8c00",
+  "#8b00ff",
+  "#00ffff",
+  "#f15bb5",
 ] as const;
 
 /** Spacing between rooms on the grid (center-to-center) */

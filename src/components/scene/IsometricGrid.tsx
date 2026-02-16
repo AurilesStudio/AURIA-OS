@@ -16,8 +16,8 @@ const BORDER_POINTS: [number, number, number][] = [
   [-hw, 0.01, -hd],
 ];
 
-/** Single room zone with neon border outline + label */
-function IsometricRoom({ room }: { room: RoomData }) {
+/** Single room zone with neon border outline + label + number */
+function IsometricRoom({ room, roomNumber }: { room: RoomData; roomNumber: number }) {
   const points = useMemo(() => BORDER_POINTS, []);
 
   return (
@@ -38,27 +38,59 @@ function IsometricRoom({ room }: { room: RoomData }) {
       <Line
         points={points}
         color={room.borderColor}
-        lineWidth={1.5}
+        lineWidth={2.5}
       />
 
-      {/* Room label — flat on floor along bottom-left border */}
+      {/* Neon glow border (wider, transparent, underneath) */}
+      <Line
+        points={points}
+        color={room.borderColor}
+        lineWidth={6}
+        transparent
+        opacity={0.15}
+      />
+
+      {/* Room number — large, centered, neon glow */}
       <Text
-        position={[-hw + 1.6, 0.03, hd + 0.45]}
+        position={[0, 0.02, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.32}
+        fontSize={2.8}
         color={room.borderColor}
         anchorX="center"
+        anchorY="middle"
+        fillOpacity={0.4}
+      >
+        {String(roomNumber)}
+        <meshStandardMaterial
+          color={room.borderColor}
+          emissive={room.borderColor}
+          emissiveIntensity={1.5}
+          transparent
+          opacity={0.4}
+          toneMapped={false}
+        />
+      </Text>
+
+      {/* Room label — flat on floor, left-aligned to border, neon glow */}
+      <Text
+        position={[-hw, 0.03, hd + 0.45]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.28}
+        color={room.borderColor}
+        anchorX="left"
         anchorY="top"
-        fillOpacity={0.8}
-        letterSpacing={0.12}
+        fillOpacity={0.9}
+        letterSpacing={0.08}
+        maxWidth={ROOM_SIZE.width}
       >
         {room.label.toUpperCase()}
         <meshStandardMaterial
           color={room.borderColor}
           emissive={room.borderColor}
-          emissiveIntensity={0.6}
+          emissiveIntensity={1.5}
           transparent
-          opacity={0.8}
+          opacity={0.9}
+          toneMapped={false}
         />
       </Text>
     </group>
@@ -133,8 +165,8 @@ export function IsometricRooms() {
       {project && rooms.length > 0 && (
         <ProjectFrame rooms={rooms} project={project} />
       )}
-      {rooms.map((room) => (
-        <IsometricRoom key={room.id} room={room} />
+      {rooms.map((room, i) => (
+        <IsometricRoom key={room.id} room={room} roomNumber={i + 1} />
       ))}
     </group>
   );
