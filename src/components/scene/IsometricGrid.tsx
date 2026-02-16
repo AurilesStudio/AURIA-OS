@@ -39,6 +39,8 @@ function IsometricRoom({ room, roomNumber }: { room: RoomData; roomNumber: numbe
         points={points}
         color={room.borderColor}
         lineWidth={2.5}
+        transparent
+        opacity={0.5}
       />
 
       {/* Neon glow border (wider, transparent, underneath) */}
@@ -121,7 +123,7 @@ function ProjectFrame({ rooms, project }: { rooms: RoomData[]; project: Project 
       outline: [
         [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [x0, y, z0],
       ] as [number, number, number][],
-      labelPos: [x0 + 0.6, 0.006, z0 - 0.35] as [number, number, number],
+      labelPos: [x0, 0.006, z0 - 0.35] as [number, number, number],
     };
   }, [rooms]);
 
