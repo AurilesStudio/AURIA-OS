@@ -7,7 +7,6 @@ import { IsometricRooms } from "./IsometricGrid";
 import { AvatarGroup } from "./AvatarGroup";
 import { SceneParticles } from "./SceneParticles";
 import { SceneProps } from "./SceneProps";
-import { AuriaMascot } from "./AuriaMascot";
 
 export function IsometricScene() {
   const selectAvatar = useStore((s) => s.selectAvatar);
@@ -51,7 +50,6 @@ export function IsometricScene() {
         <SceneProps />
         <Suspense fallback={null}>
           <AvatarGroup />
-          <AuriaMascot />
         </Suspense>
       </Canvas>
     </div>

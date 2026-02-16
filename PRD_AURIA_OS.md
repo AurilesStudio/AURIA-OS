@@ -24,7 +24,26 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 - **Project Cards :** Cartes interactives pour Techly Agency, Paris Ynov Campus (Pédagogie), etc.
 - **Quick Actions :** Boutons "Git Pull & Restart", "Run Tests", "Check Linear High Priority".
 
-### 4.3. Intégration Écosystème
+### 4.3. Système de Team (9 avatars par projet)
+- **Character Catalog :** Bibliothèque de 9 personnages 3D (Goku, Vegeta, Gohan, Piccolo, Gogeta, Vegeto, Trunks, Broly, Black Goku) — un avatar par room, découplés du provider LLM.
+- **Recrutement :** Modal en 2 étapes — choix du personnage puis configuration (provider, role, room cible, system prompt).
+- **Rôles libres :** Champ texte avec suggestions (CEO, CTO, CFO, DevOps, etc.) au lieu d'un enum fixe.
+- **System Prompt :** Chaque agent a son propre prompt système détaillé pour le LLM.
+- **Skills :** 8 compétences assignables par agent (Frontend, Backend, DevOps, Design, Database, Testing, Security, Docs).
+- **Team Templates :** Sauvegarder l'équipe d'un projet comme template réutilisable, déployable sur d'autres projets.
+- **Déploiement :** Un template crée/met à jour les avatars dans les rooms du projet cible (les clés API restent vides par sécurité).
+
+### 4.4. Système de Leveling & Conscience Agent
+- **Conscience propre :** Chaque agent développe une "conscience" à travers son expérience. Son level reflète sa maturité et sa fiabilité sur sa mission.
+- **Level 0 → 100 :** Chaque agent démarre au niveau 0 et progresse en accomplissant des tâches.
+- **Progression :** +1 level à chaque tâche complétée avec succès et **validée par AURIA** (plafonné à 100).
+- **Validation AURIA :** Toute finalisation de tâche passe obligatoirement par AURIA qui vérifie la qualité du travail avant de confirmer la complétion. Un agent ne peut pas level up sans l'approbation d'AURIA.
+- **Objectif agent :** Chaque agent a pour but de finaliser sa mission au mieux pour level up. Le level devient un indicateur de confiance et de performance.
+- **Affichage 3D :** Le level apparaît à côté du nom de l'agent au-dessus de son modèle 3D (visible dès level 1).
+- **Barre de progression :** Barre visuelle dans le panneau de settings de l'agent, colorée selon la couleur de l'agent.
+- **Persistance :** Le level est sauvegardé et restauré au refresh.
+
+### 4.5. Intégration Écosystème
 - **Linear Sync :** Affichage des tickets urgents.
 - **Notion Bridge :** Exportation du contexte en cas de saturation de tokens.
 - **GitHub Monitor :** Statut des PRs et déploiements.

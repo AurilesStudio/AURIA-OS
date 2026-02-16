@@ -5,10 +5,12 @@ interface AvatarLabelProps {
   name: string;
   color: string;
   status: AvatarStatus;
+  role?: string;
+  level?: number;
 }
 
 /** Simple floating name label above the avatar (red/coral text like reference) */
-export function AvatarLabel({ name, color, status }: AvatarLabelProps) {
+export function AvatarLabel({ name, color, status, role, level }: AvatarLabelProps) {
   return (
     <Html position={[0, 1.7, 0]} center distanceFactor={8} zIndexRange={[10, 0]}>
       <div
@@ -30,7 +32,18 @@ export function AvatarLabel({ name, color, status }: AvatarLabelProps) {
           }}
         >
           {name}
+          {level != null && level > 0 && (
+            <span className="ml-1 text-[8px] opacity-70">Lv.{level}</span>
+          )}
         </div>
+        {role && (
+          <div
+            className="text-[8px]"
+            style={{ color: color, opacity: 0.6 }}
+          >
+            {role}
+          </div>
+        )}
       </div>
     </Html>
   );

@@ -3,14 +3,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Cpu, Clock, ArrowRightLeft, Eye, EyeOff,
   Trash2, KeyRound, Settings, Activity, Box, Play,
+  FileText, Zap, Wrench,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
 import {
   AVATAR_PROVIDER_LABELS,
-  AVATAR_ROLE_LABELS,
+  ROLE_SUGGESTIONS,
+  SKILLS,
 } from "@/types";
-import type { AvatarRole } from "@/types";
+import type { LLMProvider } from "@/types";
 import { formatTime } from "@/lib/utils";
 
 type Tab = "settings" | "activity";
@@ -27,12 +29,15 @@ export function AvatarInfoPanel() {
   const setAvatarGenerationConsoleOpen = useStore((s) => s.setAvatarGenerationConsoleOpen);
   const availableClipNames = useStore((s) => s.availableClipNames);
   const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
+  const toggleAvatarSkill = useStore((s) => s.toggleAvatarSkill);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<AvatarRole>("dev");
+  const [role, setRole] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [provider, setProvider] = useState<LLMProvider>("auria");
 
   // Sync local form state when selected avatar changes
   useEffect(() => {
@@ -40,6 +45,8 @@ export function AvatarInfoPanel() {
       setName(selectedAvatar.name);
       setRole(selectedAvatar.role);
       setApiKey(selectedAvatar.apiKey);
+      setSystemPrompt(selectedAvatar.systemPrompt);
+      setProvider(selectedAvatar.provider);
       setShowKey(false);
       setTab("settings");
     }
@@ -50,16 +57,20 @@ export function AvatarInfoPanel() {
   const hasChanges =
     name !== selectedAvatar.name ||
     role !== selectedAvatar.role ||
-    apiKey !== selectedAvatar.apiKey;
+    apiKey !== selectedAvatar.apiKey ||
+    systemPrompt !== selectedAvatar.systemPrompt ||
+    provider !== selectedAvatar.provider;
 
   const handleSave = () => {
-    updateAvatar(selectedAvatar.id, { name, role, apiKey });
+    updateAvatar(selectedAvatar.id, { name, role, apiKey, systemPrompt, provider });
   };
 
   const handleCancel = () => {
     setName(selectedAvatar.name);
     setRole(selectedAvatar.role);
     setApiKey(selectedAvatar.apiKey);
+    setSystemPrompt(selectedAvatar.systemPrompt);
+    setProvider(selectedAvatar.provider);
   };
 
   const handleDelete = () => {
@@ -134,7 +145,7 @@ export function AvatarInfoPanel() {
             </div>
 
             {/* ── Tab content ────────────────────────── */}
-            <div className="p-4">
+            <div className="max-h-[calc(100vh-220px)] overflow-y-auto p-4">
               {tab === "settings" ? (
                 <div className="flex flex-col gap-3">
                   {/* Name */}
@@ -147,21 +158,99 @@ export function AvatarInfoPanel() {
                     />
                   </label>
 
-                  {/* Role */}
+                  {/* Role (free input with suggestions) */}
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-text-muted">Role</span>
-                    <select
+                    <span className="text-[10px] uppercase text-text-muted">Role / Mission</span>
+                    <input
                       value={role}
-                      onChange={(e) => setRole(e.target.value as AvatarRole)}
+                      onChange={(e) => setRole(e.target.value)}
+                      list="role-suggestions"
+                      placeholder="Ex: CTO / Lead Dev"
+                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
+                    />
+                    <datalist id="role-suggestions">
+                      {ROLE_SUGGESTIONS.map((r) => (
+                        <option key={r} value={r} />
+                      ))}
+                    </datalist>
+                  </label>
+
+                  {/* Provider */}
+                  <label className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <Zap className="h-2.5 w-2.5" />
+                      LLM Provider
+                    </span>
+                    <select
+                      value={provider}
+                      onChange={(e) => setProvider(e.target.value as LLMProvider)}
                       className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
                     >
-                      {Object.entries(AVATAR_ROLE_LABELS).map(([key, label]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
+                      {(Object.entries(AVATAR_PROVIDER_LABELS) as [LLMProvider, string][]).map(
+                        ([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
+
+                  {/* System Prompt */}
+                  <label className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <FileText className="h-2.5 w-2.5" />
+                      System Prompt
+                    </span>
+                    <textarea
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      placeholder="Instructions for the LLM agent..."
+                      rows={4}
+                      className="resize-y rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
+                    />
+                  </label>
+
+                  {/* Skills */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <Wrench className="h-2.5 w-2.5" />
+                      Skills
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SKILLS.map((skill) => {
+                        const active = selectedAvatar.skillIds?.includes(skill.id);
+                        return (
+                          <button
+                            key={skill.id}
+                            onClick={() => toggleAvatarSkill(selectedAvatar.id, skill.id)}
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors"
+                            style={
+                              active
+                                ? {
+                                    backgroundColor: `${skill.color}20`,
+                                    border: `1px solid ${skill.color}55`,
+                                    color: skill.color,
+                                  }
+                                : {
+                                    backgroundColor: "transparent",
+                                    border: "1px solid rgba(255,255,255,0.08)",
+                                    color: "rgba(255,255,255,0.35)",
+                                  }
+                            }
+                          >
+                            <span
+                              className="inline-flex items-center justify-center rounded px-1 text-[8px] font-bold leading-tight text-white"
+                              style={{ backgroundColor: skill.color }}
+                            >
+                              {skill.icon}
+                            </span>
+                            {skill.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   {/* API Key */}
                   <label className="flex flex-col gap-1">
@@ -187,19 +276,47 @@ export function AvatarInfoPanel() {
                     </div>
                   </label>
 
-                  {/* Status */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase text-text-muted">Status</span>
-                    <span
-                      className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                      style={{
-                        backgroundColor: `${selectedAvatar.color}20`,
-                        color: selectedAvatar.color,
-                        border: `1px solid ${selectedAvatar.color}40`,
-                      }}
-                    >
-                      {selectedAvatar.status}
-                    </span>
+                  {/* Status + Level */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase text-text-muted">Status</span>
+                      <span
+                        className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                        style={{
+                          backgroundColor: `${selectedAvatar.color}20`,
+                          color: selectedAvatar.color,
+                          border: `1px solid ${selectedAvatar.color}40`,
+                        }}
+                      >
+                        {selectedAvatar.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase text-text-muted">Level</span>
+                      <span
+                        className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{
+                          backgroundColor: `${selectedAvatar.color}20`,
+                          color: selectedAvatar.color,
+                          border: `1px solid ${selectedAvatar.color}40`,
+                        }}
+                      >
+                        {selectedAvatar.level}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Level progress bar */}
+                  <div className="flex flex-col gap-1">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${selectedAvatar.level}%`,
+                          backgroundColor: selectedAvatar.color,
+                          boxShadow: `0 0 6px ${selectedAvatar.color}80`,
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {/* ── Appearance Picker ──────── */}

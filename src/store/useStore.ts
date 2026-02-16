@@ -10,16 +10,16 @@ import type {
   AvatarStatus,
   RoomData,
   LLMProvider,
-  AvatarRole,
   AppearanceEntry,
   Project,
+  TeamTemplate,
 } from "@/types";
 import {
   ROOM_SIZE,
   ROOM_BORDER_COLORS,
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
-  AGENT_TEMPLATES,
+  CHARACTER_CATALOG,
 } from "@/types";
 import { mockGauges, mockActivities, mockProjects } from "@/types/mock-data";
 import { generateId } from "@/lib/utils";
@@ -213,8 +213,16 @@ interface AuriaStore {
   avatars: AvatarData[];
   selectedAvatarId: string | null;
   selectAvatar: (id: string | null) => void;
-  addAvatar: (provider: LLMProvider) => void;
-  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData, "name" | "role" | "apiKey" | "color" | "modelUrl" | "activeClip">>) => void;
+  addAvatar: (opts: {
+    characterId: string;
+    provider: LLMProvider;
+    roomId: string;
+    roleTitle: string;
+    systemPrompt: string;
+  }) => void;
+  updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData,
+    "name" | "role" | "systemPrompt" | "apiKey" | "color" | "modelUrl" | "activeClip" | "provider" | "characterId" | "skillIds"
+  >>) => void;
   removeAvatar: (avatarId: string) => void;
   assignAction: (avatarId: string, prompt: string) => void;
   completeAction: (avatarId: string, result: string) => void;
@@ -222,6 +230,15 @@ interface AuriaStore {
   setAvatarStatus: (avatarId: string, status: AvatarStatus) => void;
   moveAvatarToRoom: (avatarId: string, roomId: string) => void;
   updateAvatarPosition: (avatarId: string, position: [number, number, number]) => void;
+  toggleAvatarSkill: (avatarId: string, skillId: string) => void;
+
+  // Team Templates
+  teamTemplates: TeamTemplate[];
+  addTeamTemplate: (template: Omit<TeamTemplate, "id" | "createdAt" | "updatedAt">) => void;
+  updateTeamTemplate: (id: string, data: Partial<Omit<TeamTemplate, "id">>) => void;
+  removeTeamTemplate: (id: string) => void;
+  deployTeamToProject: (templateId: string, projectId: string) => void;
+  saveProjectTeamAsTemplate: (projectId: string, name: string) => void;
 }
 
 export const useStore = create<AuriaStore>()(persist((set) => ({
@@ -443,7 +460,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       id: "appearance-vegeta",
       name: "Vegeta",
       thumbnailUrl: "",
-      modelUrl: "/models/vegeta_tripo.glb",
+      modelUrl: "/models/vegeta.glb",
       createdAt: Date.now(),
     },
   ],
@@ -510,10 +527,10 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   avatars: [{
     id: "avatar-auria",
     name: "Goku",
-    role: "dev" as const,
+    role: "dev",
     provider: "auria" as const,
     color: "#ff3c3c",
-    modelUrl: "/models/goku_tripo.glb",
+    modelUrl: "/models/goku.glb",
     activeClip: "Happy Idle",
     status: "idle" as const,
     currentAction: null,
@@ -522,39 +539,51 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     roomId: "room-dev",
     apiKey: "",
     projectId: "project-1",
+    characterId: "goku",
+    systemPrompt: "",
+    skillIds: [],
+    level: 0,
   }],
   selectedAvatarId: null,
 
   selectAvatar: (id) => set({ selectedAvatarId: id }),
 
-  addAvatar: (provider) =>
+  addAvatar: (opts) =>
     set((state) => {
-      const template = AGENT_TEMPLATES.find((t) => t.provider === provider);
-      if (!template) return state;
-      // Count existing avatars of this provider to generate unique name
-      const count = state.avatars.filter((a) => a.provider === provider).length;
+      const character = CHARACTER_CATALOG.find((c) => c.id === opts.characterId);
+      const charName = character?.name ?? opts.characterId;
+      const charModelUrl = character?.modelUrl ?? "";
+      const charColor = character?.color ?? "#888888";
+
+      // Count existing avatars of this character to generate unique name
+      const count = state.avatars.filter((a) => a.characterId === opts.characterId).length;
       const suffix = count > 0 ? ` ${count + 1}` : "";
-      // Place in the first room of the active project
-      const projectRooms = state.rooms.filter((r) => r.projectId === state.activeProjectId);
-      const room = projectRooms[0] ?? state.rooms[0];
+
+      // Place in the target room
+      const room = state.rooms.find((r) => r.id === opts.roomId);
       if (!room) return state;
       const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
       const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
+
       const avatar: AvatarData = {
         id: `avatar-${generateId()}`,
-        name: `${template.defaultName}${suffix}`,
-        role: template.defaultRole,
-        provider: template.provider,
-        color: template.color,
-        modelUrl: template.defaultModelUrl ?? "",
+        name: `${charName}${suffix}`,
+        role: opts.roleTitle,
+        provider: opts.provider,
+        color: charColor,
+        modelUrl: charModelUrl,
         activeClip: "Happy Idle",
         status: "idle",
         currentAction: null,
         history: [],
         position: [room.position[0] + ox, 0, room.position[2] + oz],
-        roomId: room.id,
+        roomId: opts.roomId,
         apiKey: "",
-        projectId: state.activeProjectId,
+        projectId: room.projectId,
+        characterId: opts.characterId,
+        systemPrompt: opts.systemPrompt,
+        skillIds: [],
+        level: 0,
       };
       return { avatars: [...state.avatars, avatar], selectedAvatarId: avatar.id };
     }),
@@ -613,6 +642,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
                 status: "success" as const,
                 currentAction: null,
                 history: completed ? [...a.history, completed] : a.history,
+                level: Math.min(a.level + 1, 100),
               }
             : a,
         ),
@@ -690,6 +720,140 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         a.id === avatarId ? { ...a, position } : a,
       ),
     })),
+
+  toggleAvatarSkill: (avatarId, skillId) =>
+    set((state) => ({
+      avatars: state.avatars.map((a) => {
+        if (a.id !== avatarId) return a;
+        const has = a.skillIds.includes(skillId);
+        return {
+          ...a,
+          skillIds: has
+            ? a.skillIds.filter((s) => s !== skillId)
+            : [...a.skillIds, skillId],
+        };
+      }),
+    })),
+
+  // ── Team Templates ────────────────────────────────────────
+  teamTemplates: [],
+
+  addTeamTemplate: (template) =>
+    set((state) => ({
+      teamTemplates: [
+        ...state.teamTemplates,
+        {
+          ...template,
+          id: `team-${generateId()}`,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+    })),
+
+  updateTeamTemplate: (id, data) =>
+    set((state) => ({
+      teamTemplates: state.teamTemplates.map((t) =>
+        t.id === id ? { ...t, ...data, updatedAt: Date.now() } : t,
+      ),
+    })),
+
+  removeTeamTemplate: (id) =>
+    set((state) => ({
+      teamTemplates: state.teamTemplates.filter((t) => t.id !== id),
+    })),
+
+  deployTeamToProject: (templateId, projectId) =>
+    set((state) => {
+      const template = state.teamTemplates.find((t) => t.id === templateId);
+      if (!template) return state;
+
+      const projectRooms = state.rooms.filter((r) => r.projectId === projectId);
+      let avatars = [...state.avatars];
+
+      for (const slot of template.slots) {
+        // Find matching room in this project
+        const room = projectRooms.find((r) => r.id === slot.roomId)
+          ?? projectRooms[projectRooms.indexOf(projectRooms[0]!)];
+        if (!room) continue;
+
+        const character = CHARACTER_CATALOG.find((c) => c.id === slot.characterId);
+        const charName = slot.avatarName ?? character?.name ?? slot.characterId;
+        const charModelUrl = character?.modelUrl ?? "";
+        const charColor = slot.color ?? character?.color ?? "#888888";
+
+        // Check if an avatar already exists in this room for this project
+        const existingIdx = avatars.findIndex(
+          (a) => a.roomId === room.id && a.projectId === projectId,
+        );
+
+        const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
+        const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
+
+        if (existingIdx >= 0) {
+          // Update existing avatar
+          avatars[existingIdx] = {
+            ...avatars[existingIdx]!,
+            characterId: slot.characterId,
+            provider: slot.provider,
+            role: slot.roleTitle,
+            systemPrompt: slot.systemPrompt,
+            name: charName,
+            color: charColor,
+            modelUrl: charModelUrl,
+            // Keep apiKey — security: user fills it manually
+          };
+        } else {
+          // Create new avatar
+          avatars.push({
+            id: `avatar-${generateId()}`,
+            name: charName,
+            role: slot.roleTitle,
+            provider: slot.provider,
+            color: charColor,
+            modelUrl: charModelUrl,
+            activeClip: "Happy Idle",
+            status: "idle",
+            currentAction: null,
+            history: [],
+            position: [room.position[0] + ox, 0, room.position[2] + oz],
+            roomId: room.id,
+            apiKey: "",
+            projectId,
+            characterId: slot.characterId,
+            systemPrompt: slot.systemPrompt,
+            skillIds: [],
+            level: 0,
+          });
+        }
+      }
+
+      return { avatars };
+    }),
+
+  saveProjectTeamAsTemplate: (projectId, name) =>
+    set((state) => {
+      const projectAvatars = state.avatars.filter((a) => a.projectId === projectId);
+      const slots = projectAvatars.map((a) => ({
+        roomId: a.roomId,
+        characterId: a.characterId,
+        provider: a.provider,
+        roleTitle: a.role,
+        systemPrompt: a.systemPrompt,
+        avatarName: a.name,
+        color: a.color,
+      }));
+
+      const template: TeamTemplate = {
+        id: `team-${generateId()}`,
+        name,
+        slots,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      return { teamTemplates: [...state.teamTemplates, template] };
+    }),
 }), {
   name: "auria-store",
   partialize: (state) => ({
@@ -708,15 +872,20 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       position: a.position,
       apiKey: a.apiKey,
       projectId: a.projectId,
+      characterId: a.characterId,
+      systemPrompt: a.systemPrompt,
+      skillIds: a.skillIds,
+      level: a.level,
     })),
     workspaceProjects: state.workspaceProjects,
     activeProjectId: state.activeProjectId,
+    teamTemplates: state.teamTemplates,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
-      id: string; name: string; role: AvatarRole; provider: LLMProvider;
+      id: string; name: string; role: string; provider: LLMProvider;
       color: string; modelUrl?: string; activeClip?: string; roomId: string; position: [number, number, number]; apiKey: string;
-      projectId?: string;
+      projectId?: string; characterId?: string; systemPrompt?: string; skillIds?: string[]; level?: number;
     };
     const saved = persisted as {
       tripoApiKey?: string;
@@ -725,6 +894,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       avatars?: SavedAvatar[];
       workspaceProjects?: Project[];
       activeProjectId?: string;
+      teamTemplates?: TeamTemplate[];
     } | undefined;
     if (!saved) return current;
 
@@ -761,25 +931,33 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ? [...savedRooms, ...missingDefaults]
       : current.rooms;
 
-    if (!saved.avatars || saved.avatars.length === 0) {
-      return { ...current, tripoApiKey, appearances, rooms, workspaceProjects, activeProjectId };
+    // Merge team templates
+    const teamTemplates = saved.teamTemplates ?? current.teamTemplates;
+
+    // If no saved avatars key at all (first ever load), use defaults
+    if (!saved.avatars) {
+      return { ...current, tripoApiKey, appearances, rooms, workspaceProjects, activeProjectId, teamTemplates };
     }
 
     // Build map of default avatars for merging
     const defaultMap = new Map(current.avatars.map((a) => [a.id, a]));
 
-    // Restore avatars: merge saved fields into defaults when available,
-    // or create full avatars for dynamically-added agents
-    // Restore saved avatars + append missing defaults
-    const restoredAvatars: AvatarData[] = saved.avatars.map((s) => {
+    // Build a map from characterId → current modelUrl for migration
+    const catalogModelUrls = new Map(CHARACTER_CATALOG.map((c) => [c.id, c.modelUrl]));
+
+    // Restore saved avatars (empty array = user deleted them all, respect that)
+    const avatars: AvatarData[] = saved.avatars.map((s) => {
       const base = defaultMap.get(s.id);
+      // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
+      const catalogUrl = s.characterId ? catalogModelUrls.get(s.characterId) : undefined;
+      const modelUrl = catalogUrl ?? (s.modelUrl || base?.modelUrl || "");
       return {
         id: s.id,
         name: s.name,
         role: s.role,
         provider: s.provider,
         color: s.color,
-        modelUrl: s.modelUrl || base?.modelUrl || "",
+        modelUrl,
         activeClip: s.activeClip || "Happy Idle",
         status: "idle" as const,
         currentAction: null,
@@ -788,12 +966,13 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         roomId: s.roomId,
         apiKey: s.apiKey ?? "",
         projectId: s.projectId ?? "project-1",
+        characterId: s.characterId ?? "",
+        systemPrompt: s.systemPrompt ?? "",
+        skillIds: s.skillIds ?? [],
+        level: s.level ?? 0,
       };
     });
-    const savedAvatarIds = new Set(restoredAvatars.map((a) => a.id));
-    const missingAvatarDefaults = current.avatars.filter((a) => !savedAvatarIds.has(a.id));
-    const avatars = [...restoredAvatars, ...missingAvatarDefaults];
 
-    return { ...current, tripoApiKey, appearances, rooms, avatars, workspaceProjects, activeProjectId };
+    return { ...current, tripoApiKey, appearances, rooms, avatars, workspaceProjects, activeProjectId, teamTemplates };
   },
 }));

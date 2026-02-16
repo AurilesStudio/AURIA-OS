@@ -7,7 +7,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import type { Group } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { AvatarData } from "@/types";
-import { ROOM_SIZE } from "@/types";
+import { ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
 import { AvatarGlow } from "./AvatarGlow";
@@ -33,7 +33,7 @@ interface AvatarModelProps {
 }
 
 // ── GLB avatar with FBX retargeted animations ────────────────
-function GltfAvatar({ url, avatarId }: { url: string; avatarId: string }) {
+function GltfAvatar({ url, avatarId, baseRotationY = 0 }: { url: string; avatarId: string; baseRotationY?: number }) {
   const gltf = useGLTF(url);
   const fbxFiles = ANIM_URLS.map((u) => useLoader(FBXLoader, u));
   const groupRef = useRef<Group>(null);
@@ -151,7 +151,7 @@ function GltfAvatar({ url, avatarId }: { url: string; avatarId: string }) {
   });
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} rotation={[0, baseRotationY, 0]}>
       <primitive object={scene} />
     </group>
   );
@@ -336,17 +336,19 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const skin = "#c8956c";
   const outfit = avatar.color;
   const ei = isSelected ? 0.4 : 0.15;
+  const charEntry = CHARACTER_CATALOG.find((c) => c.id === avatar.characterId);
+  const baseRotationY = charEntry?.rotationY ?? 0;
 
   return (
     <group position={avatar.position}>
       <group ref={groupRef} onPointerDown={handlePointerDown}>
         {avatar.modelUrl ? (
-          <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} />
+          <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} baseRotationY={baseRotationY} />
         ) : (
           <ProceduralAvatar color={outfit} skin={skin} ei={ei} />
         )}
 
-        <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} />
+        <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={avatar.role} level={avatar.level} />
       </group>
 
       <AvatarGlow visible={isSelected} status={avatar.status} />

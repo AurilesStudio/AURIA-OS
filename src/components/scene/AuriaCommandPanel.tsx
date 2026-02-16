@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Radio, Cpu, ChevronDown, Play } from "lucide-react";
+import { X, Send, Radio, Cpu, ChevronDown } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { formatTime } from "@/lib/utils";
 
@@ -10,9 +10,6 @@ export function AuriaCommandPanel() {
   const messages = useStore((s) => s.auriaMessages);
   const sendMessage = useStore((s) => s.sendAuriaMessage);
   const avatars = useStore((s) => s.avatars);
-  const auriaClipNames = useStore((s) => s.auriaClipNames);
-  const auriaActiveClip = useStore((s) => s.auriaActiveClip);
-  const requestAuriaClip = useStore((s) => s.requestAuriaClip);
 
   const [input, setInput] = useState("");
   const [targetAgent, setTargetAgent] = useState<string | undefined>(undefined);
@@ -116,47 +113,6 @@ export function AuriaCommandPanel() {
                   </div>
                 ))}
               </div>
-
-              {/* Animation controls */}
-              {auriaClipNames.length > 0 && (
-                <div className="border-b border-white/5 px-5 py-2.5">
-                  <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wider text-text-muted">
-                    Animations ({auriaClipNames.length} clips)
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {auriaClipNames.map((name) => (
-                      <button
-                        key={name}
-                        onClick={() => requestAuriaClip(name)}
-                        className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors"
-                        style={{
-                          backgroundColor:
-                            auriaActiveClip === name
-                              ? "rgba(255,60,60,0.15)"
-                              : "rgba(255,255,255,0.03)",
-                          border:
-                            auriaActiveClip === name
-                              ? "1px solid rgba(255,60,60,0.4)"
-                              : "1px solid rgba(255,255,255,0.08)",
-                          color:
-                            auriaActiveClip === name ? "#ff3c3c" : "#999",
-                        }}
-                      >
-                        <Play
-                          className="h-2.5 w-2.5"
-                          style={{
-                            fill:
-                              auriaActiveClip === name
-                                ? "#ff3c3c"
-                                : "transparent",
-                          }}
-                        />
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Messages */}
               <div className="flex h-64 flex-col gap-2 overflow-y-auto px-5 py-3">

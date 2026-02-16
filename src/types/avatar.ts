@@ -1,9 +1,21 @@
 // ── Avatar Types ──────────────────────────────────────────────
 
-export type AvatarRole = "dev" | "designer" | "pm";
+export type AvatarRole = string;
 export type AvatarStatus = "idle" | "working" | "success" | "error";
 
 export type LLMProvider = "auria" | "claude" | "gemini" | "mistral";
+
+export const ROLE_SUGGESTIONS: string[] = [
+  "CEO / Visionnaire",
+  "Directeur Juridique",
+  "Directeur Artistique",
+  "CTO / Lead Dev",
+  "DevOps Engineer",
+  "Directeur Marketing",
+  "CFO / Finance",
+  "Data Analyst",
+  "Ops Manager",
+];
 
 export interface AvatarAction {
   id: string;
@@ -29,23 +41,54 @@ export interface AvatarData {
   roomId: string;
   apiKey: string;
   projectId: string;
+  characterId: string;
+  systemPrompt: string;
+  skillIds: string[];
+  level: number;
 }
 
-/** Catalog entry shown in the Recruit modal */
-export interface AgentTemplate {
-  provider: LLMProvider;
-  label: string;
-  defaultName: string;
+// ── Character Catalog ────────────────────────────────────────
+
+export interface CharacterEntry {
+  id: string;
+  name: string;
+  modelUrl: string;
   color: string;
-  defaultRole: AvatarRole;
-  defaultModelUrl: string;
+  rotationY?: number;
 }
 
-export const AGENT_TEMPLATES: AgentTemplate[] = [
-  { provider: "claude", label: "Vegeta", defaultName: "Vegeta", color: "#3c5eff", defaultRole: "dev", defaultModelUrl: "/models/vegeta_tripo.glb" },
-  { provider: "gemini", label: "Gohan", defaultName: "Gohan", color: "#ff9f0a", defaultRole: "designer", defaultModelUrl: "/models/gohan_test.glb" },
-  { provider: "mistral", label: "Auria", defaultName: "Auria", color: "#ff2d7a", defaultRole: "pm", defaultModelUrl: "/models/auria.glb" },
+export const CHARACTER_CATALOG: CharacterEntry[] = [
+  { id: "goku",   name: "Goku",   modelUrl: "/models/goku.glb",   color: "#ff3c3c", rotationY: -Math.PI / 2 },
+  { id: "vegeta", name: "Vegeta", modelUrl: "/models/vegeta.glb", color: "#3c5eff", rotationY: -Math.PI / 2 },
+  { id: "gohan",  name: "Gohan",  modelUrl: "/models/Gohan.glb",        color: "#f5a623", rotationY: -Math.PI / 2 },
+  { id: "piccolo", name: "Piccolo", modelUrl: "/models/piccolo.glb",   color: "#2ecc71", rotationY: -Math.PI / 2 },
+  { id: "gogeta",  name: "Gogeta",  modelUrl: "/models/gogeta.glb",    color: "#e056fd", rotationY: -Math.PI / 2 },
+  { id: "vegeto",  name: "Vegeto",  modelUrl: "/models/vegeto.glb",    color: "#ff6b35", rotationY: -Math.PI / 2 },
+  { id: "trunks",  name: "Trunks",  modelUrl: "/models/trunks.glb",    color: "#9b59b6", rotationY: -Math.PI / 2 },
+  { id: "broly",      name: "Broly",      modelUrl: "/models/broly.glb",      color: "#27ae60", rotationY: -Math.PI / 2 },
+  { id: "black-goku", name: "Black Goku", modelUrl: "/models/black goku.glb", color: "#1a1a2e", rotationY: -Math.PI / 2 },
+  // Additional entries when user uploads GLBs
 ];
+
+// ── Team Types ───────────────────────────────────────────────
+
+export interface TeamSlot {
+  roomId: string;
+  characterId: string;
+  provider: LLMProvider;
+  roleTitle: string;
+  systemPrompt: string;
+  avatarName?: string;
+  color?: string;
+}
+
+export interface TeamTemplate {
+  id: string;
+  name: string;
+  slots: TeamSlot[];
+  createdAt: number;
+  updatedAt: number;
+}
 
 // ── Skill Types ──────────────────────────────────────────────
 
@@ -102,23 +145,11 @@ export const ROOM_SPACING_Z = 11;
 
 // ── Mapping Constants ─────────────────────────────────────────
 
-export const AVATAR_ROLE_LABELS: Record<AvatarRole, string> = {
-  dev: "Dev Agent",
-  designer: "Designer Agent",
-  pm: "PM Agent",
-};
-
 export const AVATAR_PROVIDER_LABELS: Record<LLMProvider, string> = {
   auria: "AURIA (System)",
-  claude: "Vegeta",
-  gemini: "Gohan",
-  mistral: "Auria",
-};
-
-export const AVATAR_COLORS: Record<AvatarRole, string> = {
-  dev: "#bf00ff",
-  designer: "#ff003c",
-  pm: "#ff2d7a",
+  claude: "Claude (Anthropic)",
+  gemini: "Gemini (Google)",
+  mistral: "Mistral AI",
 };
 
 // ── Project Types ─────────────────────────────────────────────

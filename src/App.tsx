@@ -9,6 +9,7 @@ import { AuriaCommandPanel } from "@/components/scene/AuriaCommandPanel";
 import { SkillsAssignmentPanel } from "@/components/scene/SkillsAssignmentPanel";
 import { useStore } from "@/store/useStore";
 import { ProjectSelector } from "@/components/scene/ProjectSelector";
+import { TeamManagerPanel } from "@/components/scene/TeamManagerPanel";
 import { UserPlus } from "lucide-react";
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
       {/* z-30 — Bottom bar: Project selector + Room management + Recruit agent */}
       <div className="fixed bottom-4 left-4 z-30 flex items-end gap-2">
         <ProjectSelector />
+        <TeamManagerPanel />
         <RoomManagerPanel />
         <button
           onClick={() => setRecruitOpen(true)}
