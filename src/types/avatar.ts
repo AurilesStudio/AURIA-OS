@@ -62,11 +62,11 @@ export const CHARACTER_CATALOG: CharacterEntry[] = [
   { id: "vegeta", name: "Vegeta", modelUrl: "/models/vegeta.glb", color: "#3c5eff", rotationY: -Math.PI / 2 },
   { id: "gohan",  name: "Gohan",  modelUrl: "/models/Gohan.glb",        color: "#f5a623", rotationY: -Math.PI / 2 },
   { id: "piccolo", name: "Piccolo", modelUrl: "/models/piccolo.glb",   color: "#2ecc71", rotationY: -Math.PI / 2 },
-  { id: "gogeta",  name: "Gogeta",  modelUrl: "/models/gogeta.glb",    color: "#e056fd", rotationY: -Math.PI / 2 },
+  { id: "gogeta",  name: "Gogeta",  modelUrl: "/models/gogeta.glb",    color: "#ffffff", rotationY: -Math.PI / 2 },
   { id: "vegeto",  name: "Vegeto",  modelUrl: "/models/vegeto.glb",    color: "#ff6b35", rotationY: -Math.PI / 2 },
   { id: "trunks",  name: "Trunks",  modelUrl: "/models/trunks.glb",    color: "#9b59b6", rotationY: -Math.PI / 2 },
   { id: "broly",      name: "Broly",      modelUrl: "/models/broly.glb",      color: "#27ae60", rotationY: -Math.PI / 2 },
-  { id: "black-goku", name: "Black Goku", modelUrl: "/models/black goku.glb", color: "#1a1a2e", rotationY: -Math.PI / 2 },
+  { id: "black-goku", name: "Black Goku", modelUrl: "/models/black goku.glb", color: "#8b5cf6", rotationY: -Math.PI / 2 },
   // Additional entries when user uploads GLBs
 ];
 
