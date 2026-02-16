@@ -102,11 +102,21 @@ function IsometricRoom({ room, roomNumber }: { room: RoomData; roomNumber: numbe
 const FRAME_PADDING = 2.8;
 const FRAME_COLOR = "#a855f7";
 const FRAME_LABEL_COLOR = "#e0c0ff";
-const FRAME_OPACITY = 0.25;
 
 /** Bounding frame around all rooms of a project */
-function ProjectFrame({ rooms, project }: { rooms: RoomData[]; project: Project }) {
-  const points = useMemo(() => {
+function ProjectFrame({
+  rooms,
+  project,
+  isActive,
+}: {
+  rooms: RoomData[];
+  project: Project;
+  isActive: boolean;
+}) {
+  const setActiveProjectId = useStore((s) => s.setActiveProjectId);
+  const frameOpacity = isActive ? 0.4 : 0.15;
+
+  const bounds = useMemo(() => {
     if (rooms.length === 0) return null;
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const r of rooms) {
@@ -124,52 +134,78 @@ function ProjectFrame({ rooms, project }: { rooms: RoomData[]; project: Project 
         [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [x0, y, z0],
       ] as [number, number, number][],
       labelPos: [x0, 0.006, z0 - 0.35] as [number, number, number],
+      center: [(x0 + x1) / 2, 0.001, (z0 + z1) / 2] as [number, number, number],
+      size: [x1 - x0, z1 - z0] as [number, number],
     };
   }, [rooms]);
 
-  if (!points) return null;
+  if (!bounds) return null;
 
   return (
     <group>
       <Line
-        points={points.outline}
+        points={bounds.outline}
         color={FRAME_COLOR}
         lineWidth={1}
         transparent
-        opacity={FRAME_OPACITY}
+        opacity={frameOpacity}
         linewidth={1}
       />
       <Text
-        position={points.labelPos}
+        position={bounds.labelPos}
         rotation={[-Math.PI / 2, 0, 0]}
         fontSize={0.42}
         color={FRAME_LABEL_COLOR}
         anchorX="left"
         anchorY="bottom"
-        fillOpacity={0.7}
+        fillOpacity={isActive ? 0.7 : 0.35}
         letterSpacing={0.08}
       >
         {project.name.toUpperCase()}
-        <meshBasicMaterial color={FRAME_LABEL_COLOR} transparent opacity={0.7} />
+        <meshBasicMaterial color={FRAME_LABEL_COLOR} transparent opacity={isActive ? 0.7 : 0.35} />
       </Text>
+
+      {/* Clickable zone — click to switch active project */}
+      {!isActive && (
+        <mesh
+          position={bounds.center}
+          rotation-x={-Math.PI / 2}
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveProjectId(project.id);
+          }}
+          visible={false}
+        >
+          <planeGeometry args={bounds.size} />
+          <meshBasicMaterial />
+        </mesh>
+      )}
     </group>
   );
 }
 
-/** Renders all rooms from the store (filtered by active project) */
+/** Renders all rooms from the store (all projects visible simultaneously) */
 export function IsometricRooms() {
+  const projects = useStore((s) => s.workspaceProjects);
+  const rooms = useStore((s) => s.rooms);
   const activeProjectId = useStore((s) => s.activeProjectId);
-  const rooms = useStore((s) => s.rooms).filter((r) => r.projectId === activeProjectId);
-  const project = useStore((s) => s.workspaceProjects.find((p) => p.id === s.activeProjectId));
 
   return (
     <group>
-      {project && rooms.length > 0 && (
-        <ProjectFrame rooms={rooms} project={project} />
-      )}
-      {rooms.map((room, i) => (
-        <IsometricRoom key={room.id} room={room} roomNumber={i + 1} />
-      ))}
+      {projects.map((project) => {
+        const projectRooms = rooms.filter((r) => r.projectId === project.id);
+        const isActive = project.id === activeProjectId;
+        return (
+          <group key={project.id}>
+            {projectRooms.length > 0 && (
+              <ProjectFrame rooms={projectRooms} project={project} isActive={isActive} />
+            )}
+            {projectRooms.map((room, i) => (
+              <IsometricRoom key={room.id} room={room} roomNumber={i + 1} />
+            ))}
+          </group>
+        );
+      })}
     </group>
   );
 }

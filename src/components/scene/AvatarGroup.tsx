@@ -3,8 +3,7 @@ import { useDragAvatar } from "@/hooks/useDragAvatar";
 import { AvatarModel } from "./AvatarModel";
 
 export function AvatarGroup() {
-  const activeProjectId = useStore((s) => s.activeProjectId);
-  const avatars = useStore((s) => s.avatars).filter((a) => a.projectId === activeProjectId);
+  const avatars = useStore((s) => s.avatars);
   const rooms = useStore((s) => s.rooms);
   const {
     handlePointerDown,
@@ -27,12 +26,12 @@ export function AvatarGroup() {
       <mesh
         ref={groundPlaneRef}
         rotation-x={-Math.PI / 2}
-        position={[4, 0, 3]}
+        position={[20, 0, -20]}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         visible={false}
       >
-        <planeGeometry args={[80, 80]} />
+        <planeGeometry args={[200, 200]} />
         <meshBasicMaterial />
       </mesh>
     </group>

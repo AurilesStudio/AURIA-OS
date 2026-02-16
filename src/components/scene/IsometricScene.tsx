@@ -42,7 +42,7 @@ export function IsometricScene() {
           dampingFactor={0.15}
           screenSpacePanning={false}
           minDistance={5}
-          maxDistance={80}
+          maxDistance={150}
         />
         <SceneLighting />
         <SceneParticles />

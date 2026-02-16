@@ -27,109 +27,116 @@ import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
 
 // ── Default projects ─────────────────────────────────────────
 const defaultProjects: Project[] = [
-  { id: "project-1", name: "Projet #1" },
+  { id: "project-1", name: "SAAS Projects" },
+  { id: "project-2", name: "Trading" },
+  { id: "project-3", name: "Prospectauri" },
 ];
 
 // Grid origin offset — pushes the room grid away from the camera
 const GRID_ORIGIN_X = 8;
 const GRID_ORIGIN_Z = 0.6;
 
-// ── Default rooms ────────────────────────────────────────────
-const defaultRooms: RoomData[] = [
-  {
-    id: "room-vision",
-    label: "Vision & Stratégie",
-    position: [GRID_ORIGIN_X, 0, GRID_ORIGIN_Z],
-    borderColor: ROOM_BORDER_COLORS[0],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-legal",
-    label: "Juridique",
-    position: [GRID_ORIGIN_X + ROOM_SPACING_X, 0, GRID_ORIGIN_Z],
-    borderColor: ROOM_BORDER_COLORS[1],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-design",
-    label: "Design Studio",
-    position: [GRID_ORIGIN_X + 2 * ROOM_SPACING_X, 0, GRID_ORIGIN_Z],
-    borderColor: ROOM_BORDER_COLORS[2],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-dev",
-    label: "App Development",
-    position: [GRID_ORIGIN_X, 0, GRID_ORIGIN_Z + ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[3],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-vps",
-    label: "Infra & DevOps",
-    position: [GRID_ORIGIN_X + ROOM_SPACING_X, 0, GRID_ORIGIN_Z + ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[4],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-comms",
-    label: "Communication & Marketing",
-    position: [GRID_ORIGIN_X + 2 * ROOM_SPACING_X, 0, GRID_ORIGIN_Z + ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[5],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-finance",
-    label: "Finance",
-    position: [GRID_ORIGIN_X, 0, GRID_ORIGIN_Z + 2 * ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[6],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-analytics",
-    label: "Analytics & KPIs",
-    position: [GRID_ORIGIN_X + ROOM_SPACING_X, 0, GRID_ORIGIN_Z + 2 * ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[7],
-    skillIds: [],
-    projectId: "project-1",
-  },
-  {
-    id: "room-ops",
-    label: "Ops & Support",
-    position: [GRID_ORIGIN_X + 2 * ROOM_SPACING_X, 0, GRID_ORIGIN_Z + 2 * ROOM_SPACING_Z],
-    borderColor: ROOM_BORDER_COLORS[8],
-    skillIds: [],
-    projectId: "project-1",
-  },
+// Gap between project zones in Z
+const PROJECT_ZONE_GAP = 5;
+
+/**
+ * Compute the grid origin for a project.
+ * Layout:  P1 (top-left)   P2 (top-right)
+ *                P3 (centered below)
+ * For projects beyond 3, they tile in rows of 2, centered.
+ */
+function getProjectGridOrigin(
+  projectId: string,
+  allProjects: Project[],
+): { x: number; z: number } {
+  const idx = allProjects.findIndex((p) => p.id === projectId);
+  const zoneWidth = 3 * ROOM_SPACING_X + PROJECT_ZONE_GAP;   // 54 — horizontal origin-to-origin
+  const zoneDepth = 3 * ROOM_SPACING_Z + PROJECT_ZONE_GAP;   // 48 — vertical origin-to-origin
+
+  // Row 0: indices 0, 1  — side by side
+  // Row 1: index 2        — centered between 0 and 1
+  // Row N: pairs, last odd one centered
+  const row = idx < 2 ? 0 : 1 + Math.floor((idx - 2) / 2);
+  const colInRow = idx < 2 ? idx : (idx - 2) % 2;
+  const rowSize = idx < 2 ? 2 : (idx === allProjects.length - 1 && (allProjects.length - 2) % 2 === 1) ? 1 : 2;
+
+  const rowWidth = (rowSize - 1) * zoneWidth;
+  const rowStartX = GRID_ORIGIN_X + ((zoneWidth - rowWidth) / 2); // center row relative to 2-wide row
+
+  return {
+    x: rowStartX + colInRow * zoneWidth,
+    z: GRID_ORIGIN_Z + row * zoneDepth,
+  };
+}
+
+// ── Default room labels ──────────────────────────────────────
+const DEFAULT_ROOM_LABELS = [
+  "Vision & Stratégie", "Juridique", "Design Studio",
+  "App Development", "Infra & DevOps", "Communication & Marketing",
+  "Finance", "Analytics & KPIs", "Ops & Support",
 ];
 
+const DEFAULT_ROOM_IDS: Record<string, string[]> = {
+  "project-1": [
+    "room-vision", "room-legal", "room-design",
+    "room-dev", "room-vps", "room-comms",
+    "room-finance", "room-analytics", "room-ops",
+  ],
+  "project-2": [
+    "room-p2-vision", "room-p2-legal", "room-p2-design",
+    "room-p2-dev", "room-p2-vps", "room-p2-comms",
+    "room-p2-finance", "room-p2-analytics", "room-p2-ops",
+  ],
+  "project-3": [
+    "room-p3-vision", "room-p3-legal", "room-p3-design",
+    "room-p3-dev", "room-p3-vps", "room-p3-comms",
+    "room-p3-finance", "room-p3-analytics", "room-p3-ops",
+  ],
+};
+
+/** Generate 9 default rooms for a project at its grid origin */
+function buildDefaultRooms(projectId: string): RoomData[] {
+  const origin = getProjectGridOrigin(projectId, defaultProjects);
+  const ids = DEFAULT_ROOM_IDS[projectId];
+  return DEFAULT_ROOM_LABELS.map((label, i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    return {
+      id: ids ? ids[i]! : `room-${projectId}-${i}`,
+      label,
+      position: [origin.x + col * ROOM_SPACING_X, 0, origin.z + row * ROOM_SPACING_Z] as [number, number, number],
+      borderColor: ROOM_BORDER_COLORS[i % ROOM_BORDER_COLORS.length] as string,
+      skillIds: [],
+      projectId,
+    };
+  });
+}
+
+const defaultRooms: RoomData[] = defaultProjects.flatMap((p) => buildDefaultRooms(p.id));
+
 // ── Helpers ──────────────────────────────────────────────────
-/** Compute the next free grid position for a new room */
-function nextRoomPosition(rooms: RoomData[]): [number, number, number] {
+/** Compute the next free grid position for a new room within a project zone */
+function nextRoomPosition(
+  allRooms: RoomData[],
+  projectId: string,
+  allProjects: Project[],
+): [number, number, number] {
+  const origin = getProjectGridOrigin(projectId, allProjects);
+  const projectRooms = allRooms.filter((r) => r.projectId === projectId);
   const cols = 3;
-  // Collect already-occupied grid slots
   const occupied = new Set(
-    rooms.map((r) => `${r.position[0]},${r.position[2]}`),
+    projectRooms.map((r) => `${r.position[0]},${r.position[2]}`),
   );
-  // Walk the grid until we find a free slot
   for (let i = 0; i < 200; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    const x = GRID_ORIGIN_X + col * ROOM_SPACING_X;
-    const z = GRID_ORIGIN_Z + row * ROOM_SPACING_Z;
+    const x = origin.x + col * ROOM_SPACING_X;
+    const z = origin.z + row * ROOM_SPACING_Z;
     if (!occupied.has(`${x},${z}`)) {
       return [x, 0, z];
     }
   }
-  // Fallback (should never happen)
-  return [GRID_ORIGIN_X + rooms.length * ROOM_SPACING_X, 0, GRID_ORIGIN_Z];
+  return [origin.x, 0, origin.z];
 }
 
 // ── AURIA message type ───────────────────────────────────────
@@ -281,9 +288,29 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   addProject: (name) =>
     set((state) => {
       const project: Project = { id: `project-${generateId()}`, name };
+      const newProjects = [...state.workspaceProjects, project];
+      const origin = getProjectGridOrigin(project.id, newProjects);
+      const defaultLabels = [
+        "Vision & Stratégie", "Juridique", "Design Studio",
+        "App Development", "Infra & DevOps", "Communication & Marketing",
+        "Finance", "Analytics & KPIs", "Ops & Support",
+      ];
+      const newRooms = defaultLabels.map((label, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        return {
+          id: `room-${generateId()}`,
+          label,
+          position: [origin.x + col * ROOM_SPACING_X, 0, origin.z + row * ROOM_SPACING_Z] as [number, number, number],
+          borderColor: ROOM_BORDER_COLORS[i % ROOM_BORDER_COLORS.length] as string,
+          skillIds: [],
+          projectId: project.id,
+        };
+      });
       return {
-        workspaceProjects: [...state.workspaceProjects, project],
+        workspaceProjects: newProjects,
         activeProjectId: project.id,
+        rooms: [...state.rooms, ...newRooms],
       };
     }),
 
@@ -392,7 +419,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       const room: RoomData = {
         id: `room-${generateId()}`,
         label,
-        position: nextRoomPosition(state.rooms),
+        position: nextRoomPosition(state.rooms, state.activeProjectId, state.workspaceProjects),
         borderColor: ROOM_BORDER_COLORS[colorIdx] as string,
         skillIds: [],
         projectId: state.activeProjectId,
