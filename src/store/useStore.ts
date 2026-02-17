@@ -13,6 +13,7 @@ import type {
   AppearanceEntry,
   Project,
   TeamTemplate,
+  RoleDefinition,
 } from "@/types";
 import {
   ROOM_SIZE,
@@ -20,9 +21,19 @@ import {
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
   CHARACTER_CATALOG,
+  DEFAULT_ROLES,
 } from "@/types";
-import { mockGauges, mockActivities, mockProjects } from "@/types/mock-data";
+import { mockActivities, mockProjects } from "@/types/mock-data";
 import { generateId } from "@/lib/utils";
+import { computeCost } from "@/lib/llm/pricing";
+
+// ── Initial token gauges (start at 0) ──────────────────────
+const initialGauges: TokenGaugeData[] = [
+  { provider: "gemini",  label: "Gemini 2.0 Flash", used: 0, limit: 2_000_000, color: "#ff003c", cost: 0 },
+  { provider: "claude",  label: "Claude Sonnet",    used: 0, limit: 5_000_000, color: "#bf00ff", cost: 0 },
+  { provider: "mistral", label: "Mistral Large",    used: 0, limit: 1_000_000, color: "#ff2d7a", cost: 0 },
+  { provider: "local",   label: "Local (Ollama)",   used: 0, limit: 1_000_000, color: "#22d3ee", cost: 0 },
+];
 import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
 
 // ── Default projects ─────────────────────────────────────────
@@ -157,6 +168,8 @@ interface AuriaStore {
   // Token gauges
   gauges: TokenGaugeData[];
   updateGauge: (provider: string, used: number) => void;
+  addTokenUsage: (provider: string, inputTokens: number, outputTokens: number) => void;
+  resetTokenTracking: () => void;
 
   // Activity stream
   activities: ActivityEntry[];
@@ -199,6 +212,16 @@ interface AuriaStore {
   removeRoom: (roomId: string) => void;
   toggleRoomSkill: (roomId: string, skillId: string) => void;
 
+  // LLM API Keys (global, per-provider)
+  llmApiKeys: Record<string, string>;
+  setLlmApiKey: (provider: string, key: string) => void;
+
+  // Local LLM (Ollama)
+  localLlmEndpoint: string;
+  localLlmModel: string;
+  setLocalLlmEndpoint: (url: string) => void;
+  setLocalLlmModel: (model: string) => void;
+
   // Tripo3D
   tripoApiKey: string;
   setTripoApiKey: (key: string) => void;
@@ -216,6 +239,12 @@ interface AuriaStore {
   avatarGenerationConsoleOpen: boolean;
   setAvatarGenerationConsoleOpen: (open: boolean) => void;
 
+  // Roles
+  roles: RoleDefinition[];
+  addRole: (role: Omit<RoleDefinition, "id">) => void;
+  updateRole: (roleId: string, data: Partial<Omit<RoleDefinition, "id">>) => void;
+  removeRole: (roleId: string) => void;
+
   // Avatars
   avatars: AvatarData[];
   selectedAvatarId: string | null;
@@ -224,20 +253,22 @@ interface AuriaStore {
     characterId: string;
     provider: LLMProvider;
     roomId: string;
-    roleTitle: string;
-    systemPrompt: string;
+    roleId: string;
   }) => void;
   updateAvatar: (avatarId: string, data: Partial<Pick<AvatarData,
-    "name" | "role" | "systemPrompt" | "apiKey" | "color" | "modelUrl" | "activeClip" | "provider" | "characterId" | "skillIds"
+    "name" | "roleId" | "color" | "modelUrl" | "activeClip" | "provider" | "characterId"
   >>) => void;
   removeAvatar: (avatarId: string) => void;
   assignAction: (avatarId: string, prompt: string) => void;
-  completeAction: (avatarId: string, result: string) => void;
+  completeAction: (avatarId: string, result: string, tokenUsage?: { inputTokens: number; outputTokens: number; cost: number }) => void;
   failAction: (avatarId: string, error: string) => void;
   setAvatarStatus: (avatarId: string, status: AvatarStatus) => void;
   moveAvatarToRoom: (avatarId: string, roomId: string) => void;
   updateAvatarPosition: (avatarId: string, position: [number, number, number]) => void;
-  toggleAvatarSkill: (avatarId: string, skillId: string) => void;
+
+  // Camera presets
+  cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
+  setCameraTarget: (preset: { position: [number, number, number]; target: [number, number, number] } | null) => void;
 
   // Team Templates
   teamTemplates: TeamTemplate[];
@@ -252,13 +283,29 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   systemStatus: "IDLE",
   setSystemStatus: (status) => set({ systemStatus: status }),
 
-  gauges: mockGauges,
+  gauges: initialGauges,
   updateGauge: (provider, used) =>
     set((state) => ({
       gauges: state.gauges.map((g) =>
         g.provider === provider ? { ...g, used } : g,
       ),
     })),
+
+  addTokenUsage: (provider, inputTokens, outputTokens) =>
+    set((state) => ({
+      gauges: state.gauges.map((g) =>
+        g.provider === provider
+          ? {
+              ...g,
+              used: g.used + inputTokens + outputTokens,
+              cost: g.cost + computeCost(provider, inputTokens, outputTokens),
+            }
+          : g,
+      ),
+    })),
+
+  resetTokenTracking: () =>
+    set({ gauges: initialGauges.map((g) => ({ ...g })) }),
 
   activities: mockActivities,
   addActivity: (entry) =>
@@ -471,6 +518,19 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     }),
 
   // ── Tripo3D ────────────────────────────────────────────────
+  // ── LLM API Keys ──────────────────────────────────────────
+  llmApiKeys: { claude: "", gemini: "", mistral: "" },
+  setLlmApiKey: (provider, key) =>
+    set((state) => ({
+      llmApiKeys: { ...state.llmApiKeys, [provider]: key },
+    })),
+
+  // ── Local LLM (Ollama) ──────────────────────────────────
+  localLlmEndpoint: "http://localhost:11434",
+  localLlmModel: "mistral",
+  setLocalLlmEndpoint: (url) => set({ localLlmEndpoint: url }),
+  setLocalLlmModel: (model) => set({ localLlmModel: model }),
+
   tripoApiKey: "",
   setTripoApiKey: (key) => set({ tripoApiKey: key }),
 
@@ -550,11 +610,31 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   avatarGenerationConsoleOpen: false,
   setAvatarGenerationConsoleOpen: (open) => set({ avatarGenerationConsoleOpen: open }),
 
+  // ── Roles slice ────────────────────────────────────────────
+  roles: DEFAULT_ROLES,
+
+  addRole: (role) =>
+    set((state) => ({
+      roles: [...state.roles, { ...role, id: `role-${generateId()}` }],
+    })),
+
+  updateRole: (roleId, data) =>
+    set((state) => ({
+      roles: state.roles.map((r) =>
+        r.id === roleId ? { ...r, ...data } : r,
+      ),
+    })),
+
+  removeRole: (roleId) =>
+    set((state) => ({
+      roles: state.roles.filter((r) => r.id !== roleId),
+    })),
+
   // ── Avatar slice ──────────────────────────────────────────
   avatars: [{
     id: "avatar-auria",
     name: "Goku",
-    role: "dev",
+    roleId: "role-cto",
     provider: "auria" as const,
     color: "#ff3c3c",
     modelUrl: "/models/goku.glb",
@@ -564,11 +644,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     history: [],
     position: [GRID_ORIGIN_X - 1.2, 0, GRID_ORIGIN_Z + 0.5],
     roomId: "room-dev",
-    apiKey: "",
     projectId: "project-1",
     characterId: "goku",
-    systemPrompt: "",
-    skillIds: [],
     level: 0,
   }],
   selectedAvatarId: null,
@@ -595,7 +672,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       const avatar: AvatarData = {
         id: `avatar-${generateId()}`,
         name: `${charName}${suffix}`,
-        role: opts.roleTitle,
+        roleId: opts.roleId,
         provider: opts.provider,
         color: charColor,
         modelUrl: charModelUrl,
@@ -605,11 +682,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         history: [],
         position: [room.position[0] + ox, 0, room.position[2] + oz],
         roomId: opts.roomId,
-        apiKey: "",
         projectId: room.projectId,
         characterId: opts.characterId,
-        systemPrompt: opts.systemPrompt,
-        skillIds: [],
         level: 0,
       };
       return { avatars: [...state.avatars, avatar], selectedAvatarId: avatar.id };
@@ -655,11 +729,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       };
     }),
 
-  completeAction: (avatarId, result) =>
+  completeAction: (avatarId, result, tokenUsage) =>
     set((state) => {
       const avatar = state.avatars.find((a) => a.id === avatarId);
       const completed = avatar?.currentAction
-        ? { ...avatar.currentAction, result, completedAt: new Date() }
+        ? { ...avatar.currentAction, result, completedAt: new Date(), tokenUsage }
         : null;
       return {
         avatars: state.avatars.map((a) =>
@@ -748,19 +822,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ),
     })),
 
-  toggleAvatarSkill: (avatarId, skillId) =>
-    set((state) => ({
-      avatars: state.avatars.map((a) => {
-        if (a.id !== avatarId) return a;
-        const has = a.skillIds.includes(skillId);
-        return {
-          ...a,
-          skillIds: has
-            ? a.skillIds.filter((s) => s !== skillId)
-            : [...a.skillIds, skillId],
-        };
-      }),
-    })),
+  // ── Camera presets ──────────────────────────────────────────
+  cameraTarget: null,
+  setCameraTarget: (preset) => set({ cameraTarget: preset }),
 
   // ── Team Templates ────────────────────────────────────────
   teamTemplates: [],
@@ -823,19 +887,17 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
             ...avatars[existingIdx]!,
             characterId: slot.characterId,
             provider: slot.provider,
-            role: slot.roleTitle,
-            systemPrompt: slot.systemPrompt,
+            roleId: slot.roleId,
             name: charName,
             color: charColor,
             modelUrl: charModelUrl,
-            // Keep apiKey — security: user fills it manually
           };
         } else {
           // Create new avatar
           avatars.push({
             id: `avatar-${generateId()}`,
             name: charName,
-            role: slot.roleTitle,
+            roleId: slot.roleId,
             provider: slot.provider,
             color: charColor,
             modelUrl: charModelUrl,
@@ -845,11 +907,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
             history: [],
             position: [room.position[0] + ox, 0, room.position[2] + oz],
             roomId: room.id,
-            apiKey: "",
             projectId,
             characterId: slot.characterId,
-            systemPrompt: slot.systemPrompt,
-            skillIds: [],
             level: 0,
           });
         }
@@ -865,8 +924,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         roomId: a.roomId,
         characterId: a.characterId,
         provider: a.provider,
-        roleTitle: a.role,
-        systemPrompt: a.systemPrompt,
+        roleId: a.roleId,
         avatarName: a.name,
         color: a.color,
       }));
@@ -884,24 +942,26 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 }), {
   name: "auria-store",
   partialize: (state) => ({
+    gauges: state.gauges,
+    llmApiKeys: state.llmApiKeys,
+    localLlmEndpoint: state.localLlmEndpoint,
+    localLlmModel: state.localLlmModel,
     tripoApiKey: state.tripoApiKey,
     appearances: state.appearances,
     rooms: state.rooms,
+    roles: state.roles,
     avatars: state.avatars.map((a) => ({
       id: a.id,
       name: a.name,
-      role: a.role,
+      roleId: a.roleId,
       provider: a.provider,
       color: a.color,
       modelUrl: a.modelUrl,
       activeClip: a.activeClip,
       roomId: a.roomId,
       position: a.position,
-      apiKey: a.apiKey,
       projectId: a.projectId,
       characterId: a.characterId,
-      systemPrompt: a.systemPrompt,
-      skillIds: a.skillIds,
       level: a.level,
     })),
     workspaceProjects: state.workspaceProjects,
@@ -910,14 +970,23 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
-      id: string; name: string; role: string; provider: LLMProvider;
-      color: string; modelUrl?: string; activeClip?: string; roomId: string; position: [number, number, number]; apiKey: string;
-      projectId?: string; characterId?: string; systemPrompt?: string; skillIds?: string[]; level?: number;
+      id: string; name: string; provider: LLMProvider;
+      color: string; modelUrl?: string; activeClip?: string; roomId: string; position: [number, number, number];
+      projectId?: string; characterId?: string; level?: number;
+      // New field
+      roleId?: string;
+      // Legacy fields (migration)
+      role?: string; systemPrompt?: string; skillIds?: string[]; apiKey?: string;
     };
     const saved = persisted as {
+      gauges?: TokenGaugeData[];
+      llmApiKeys?: Record<string, string>;
+      localLlmEndpoint?: string;
+      localLlmModel?: string;
       tripoApiKey?: string;
       appearances?: AppearanceEntry[];
       rooms?: RoomData[];
+      roles?: RoleDefinition[];
       avatars?: SavedAvatar[];
       workspaceProjects?: Project[];
       activeProjectId?: string;
@@ -925,7 +994,25 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     } | undefined;
     if (!saved) return current;
 
+    // Merge gauges: restore saved values, ensure cost field exists
+    const gauges = saved.gauges
+      ? saved.gauges.map((g) => ({ ...g, cost: g.cost ?? 0 }))
+      : current.gauges;
+
+    const llmApiKeys = saved.llmApiKeys
+      ? { ...current.llmApiKeys, ...saved.llmApiKeys }
+      : current.llmApiKeys;
+    const localLlmEndpoint = saved.localLlmEndpoint ?? current.localLlmEndpoint;
+    const localLlmModel = saved.localLlmModel ?? current.localLlmModel;
     const tripoApiKey = saved.tripoApiKey ?? current.tripoApiKey;
+
+    // Merge roles: restore saved + append any missing defaults
+    const savedRoles = saved.roles && saved.roles.length > 0 ? saved.roles : [];
+    const savedRoleIds = new Set(savedRoles.map((r) => r.id));
+    const missingRoleDefaults = current.roles.filter((r) => !savedRoleIds.has(r.id));
+    const roles = savedRoles.length > 0
+      ? [...savedRoles, ...missingRoleDefaults]
+      : current.roles;
 
     // Merge workspace projects
     const savedWsProjects = saved.workspaceProjects && saved.workspaceProjects.length > 0
@@ -963,7 +1050,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, tripoApiKey, appearances, rooms, workspaceProjects, activeProjectId, teamTemplates };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates };
     }
 
     // Build map of default avatars for merging
@@ -978,10 +1065,18 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
       const catalogUrl = s.characterId ? catalogModelUrls.get(s.characterId) : undefined;
       const modelUrl = catalogUrl ?? (s.modelUrl || base?.modelUrl || "");
+
+      // Migration: if legacy `role` (string) exists but no `roleId`, match by name
+      let roleId = s.roleId ?? "";
+      if (!roleId && s.role) {
+        const matched = roles.find((r) => r.name === s.role);
+        roleId = matched?.id ?? "";
+      }
+
       return {
         id: s.id,
         name: s.name,
-        role: s.role,
+        roleId,
         provider: s.provider,
         color: s.color,
         modelUrl,
@@ -991,15 +1086,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         history: [],
         position: s.position,
         roomId: s.roomId,
-        apiKey: s.apiKey ?? "",
         projectId: s.projectId ?? "project-1",
         characterId: s.characterId ?? "",
-        systemPrompt: s.systemPrompt ?? "",
-        skillIds: s.skillIds ?? [],
         level: s.level ?? 0,
       };
     });
 
-    return { ...current, tripoApiKey, appearances, rooms, avatars, workspaceProjects, activeProjectId, teamTemplates };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates };
   },
 }));

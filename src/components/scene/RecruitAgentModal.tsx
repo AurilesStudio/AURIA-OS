@@ -7,7 +7,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from "three";
 import { X, UserPlus, ArrowLeft } from "lucide-react";
 import { useStore } from "@/store/useStore";
-import { CHARACTER_CATALOG, AVATAR_PROVIDER_LABELS, ROLE_SUGGESTIONS } from "@/types";
+import { CHARACTER_CATALOG, CHARACTER_TEAMS, AVATAR_PROVIDER_LABELS } from "@/types";
 import type { LLMProvider, CharacterEntry } from "@/types";
 import {
   buildBoneMap,
@@ -98,27 +98,47 @@ function PreviewCanvas({ url, rotationY = 0 }: { url: string; rotationY?: number
   );
 }
 
+/** Placeholder when no 3D model is available */
+function CharacterPlaceholder({ name, color }: { name: string; color: string }) {
+  return (
+    <div
+      className="mx-auto mb-2 flex h-32 w-28 items-center justify-center rounded-lg border border-white/10"
+      style={{ backgroundColor: `${color}15` }}
+    >
+      <span className="text-3xl font-black opacity-40" style={{ color }}>
+        {name.charAt(0)}
+      </span>
+    </div>
+  );
+}
+
 export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addAvatar = useStore((s) => s.addAvatar);
   const rooms = useStore((s) => s.rooms);
   const avatars = useStore((s) => s.avatars);
   const activeProjectId = useStore((s) => s.activeProjectId);
-  const projectRooms = rooms.filter((r) => r.projectId === activeProjectId);
-  const deployedCharIds = new Set(
-    avatars.filter((a) => a.projectId === activeProjectId).map((a) => a.characterId),
-  );
-  const availableCharacters = CHARACTER_CATALOG.filter((c) => !deployedCharIds.has(c.id));
+  const workspaceProjects = useStore((s) => s.workspaceProjects);
+  const roles = useStore((s) => s.roles);
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [selectedTeamId, setSelectedTeamId] = useState(CHARACTER_TEAMS[0]?.id ?? "");
   const [selectedChar, setSelectedChar] = useState<CharacterEntry | null>(null);
+  const [targetProjectId, setTargetProjectId] = useState(activeProjectId);
   const [provider, setProvider] = useState<LLMProvider>("claude");
-  const [roleTitle, setRoleTitle] = useState("");
+  const [roleId, setRoleId] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
+
+  const targetRooms = rooms.filter((r) => r.projectId === targetProjectId);
+  const deployedCharIds = new Set(
+    avatars.filter((a) => a.projectId === targetProjectId).map((a) => a.characterId),
+  );
+  const teamCharacters = CHARACTER_CATALOG.filter(
+    (c) => c.teamId === selectedTeamId && !deployedCharIds.has(c.id),
+  );
 
   const handleSelectCharacter = (char: CharacterEntry) => {
     setSelectedChar(char);
-    setRoomId(projectRooms[0]?.id ?? "");
+    setRoomId(targetRooms[0]?.id ?? "");
     setStep(2);
   };
 
@@ -128,8 +148,7 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
       characterId: selectedChar.id,
       provider,
       roomId,
-      roleTitle,
-      systemPrompt,
+      roleId,
     });
     handleClose();
   };
@@ -137,10 +156,10 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
   const handleClose = () => {
     setStep(1);
     setSelectedChar(null);
+    setTargetProjectId(activeProjectId);
     setProvider("claude");
-    setRoleTitle("");
+    setRoleId("");
     setRoomId("");
-    setSystemPrompt("");
     onClose();
   };
 
@@ -184,7 +203,7 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
                     </h2>
                     <p className="text-[10px] text-text-muted">
                       {step === 1
-                        ? "Select a character for your team"
+                        ? "Select a team, then pick a character"
                         : "Choose provider, role and room"}
                     </p>
                   </div>
@@ -198,23 +217,58 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
               </div>
 
               {step === 1 ? (
-                /* ── Step 1: Character selection grid ── */
-                <div className="grid grid-cols-3 gap-3">
-                  {availableCharacters.map((char) => (
-                    <button
-                      key={char.id}
-                      onClick={() => handleSelectCharacter(char)}
-                      className="group flex flex-col items-center rounded-lg border border-white/5 bg-bg-base/40 px-3 py-4 transition-all hover:border-white/15 hover:bg-bg-base/60"
-                    >
-                      <PreviewCanvas url={char.modelUrl} rotationY={char.rotationY} />
-                      <span
-                        className="mt-1 text-xs font-semibold"
-                        style={{ color: char.color }}
-                      >
-                        {char.name}
-                      </span>
-                    </button>
-                  ))}
+                /* ── Step 1: Team tabs + character grid ── */
+                <div className="flex flex-col gap-4">
+                  {/* Team tabs */}
+                  <div className="flex gap-1 rounded-lg border border-white/5 bg-bg-base/30 p-1">
+                    {CHARACTER_TEAMS.map((team) => {
+                      const isActive = team.id === selectedTeamId;
+                      return (
+                        <button
+                          key={team.id}
+                          onClick={() => setSelectedTeamId(team.id)}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-all"
+                          style={{
+                            backgroundColor: isActive ? `${team.color}20` : "transparent",
+                            color: isActive ? team.color : "rgba(255,255,255,0.45)",
+                            borderBottom: isActive ? `2px solid ${team.color}` : "2px solid transparent",
+                          }}
+                        >
+                          <span>{team.icon}</span>
+                          {team.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Characters grid */}
+                  <div className="grid grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1">
+                    {teamCharacters.length === 0 ? (
+                      <p className="col-span-3 py-8 text-center text-xs text-text-muted">
+                        All characters from this team are already deployed.
+                      </p>
+                    ) : (
+                      teamCharacters.map((char) => (
+                        <button
+                          key={char.id}
+                          onClick={() => handleSelectCharacter(char)}
+                          className="group flex flex-col items-center rounded-lg border border-white/5 bg-bg-base/40 px-3 py-4 transition-all hover:border-white/15 hover:bg-bg-base/60"
+                        >
+                          {char.modelUrl ? (
+                            <PreviewCanvas url={char.modelUrl} rotationY={char.rotationY} />
+                          ) : (
+                            <CharacterPlaceholder name={char.name} color={char.color} />
+                          )}
+                          <span
+                            className="mt-1 text-xs font-semibold"
+                            style={{ color: char.color }}
+                          >
+                            {char.name}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
               ) : (
                 /* ── Step 2: Configuration ── */
@@ -239,6 +293,26 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
                     </div>
                   )}
 
+                  {/* Target Project */}
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase text-text-muted">Project</span>
+                    <select
+                      value={targetProjectId}
+                      onChange={(e) => {
+                        setTargetProjectId(e.target.value);
+                        const firstRoom = rooms.find((r) => r.projectId === e.target.value);
+                        setRoomId(firstRoom?.id ?? "");
+                      }}
+                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
+                    >
+                      {workspaceProjects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
                   {/* Provider */}
                   <label className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase text-text-muted">LLM Provider</span>
@@ -259,19 +333,17 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
 
                   {/* Role */}
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-text-muted">Role / Mission</span>
-                    <input
-                      value={roleTitle}
-                      onChange={(e) => setRoleTitle(e.target.value)}
-                      list="recruit-role-suggestions"
-                      placeholder="Ex: CTO / Lead Dev"
-                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                    />
-                    <datalist id="recruit-role-suggestions">
-                      {ROLE_SUGGESTIONS.map((r) => (
-                        <option key={r} value={r} />
+                    <span className="text-[10px] uppercase text-text-muted">Role</span>
+                    <select
+                      value={roleId}
+                      onChange={(e) => setRoleId(e.target.value)}
+                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
+                    >
+                      <option value="">— No role —</option>
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
                       ))}
-                    </datalist>
+                    </select>
                   </label>
 
                   {/* Room */}
@@ -282,26 +354,12 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
                       onChange={(e) => setRoomId(e.target.value)}
                       className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
                     >
-                      {projectRooms.map((room) => (
+                      {targetRooms.map((room) => (
                         <option key={room.id} value={room.id}>
                           {room.label}
                         </option>
                       ))}
                     </select>
-                  </label>
-
-                  {/* System Prompt */}
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-text-muted">
-                      System Prompt (optional)
-                    </span>
-                    <textarea
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="Instructions for the LLM agent..."
-                      rows={3}
-                      className="resize-y rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                    />
                   </label>
 
                   {/* Recruit button */}

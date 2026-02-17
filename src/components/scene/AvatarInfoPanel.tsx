@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Cpu, Clock, ArrowRightLeft, Eye, EyeOff,
-  Trash2, KeyRound, Settings, Activity, Box, Play,
-  FileText, Zap, Wrench,
+  X, Cpu, Clock, ArrowRightLeft,
+  Trash2, Settings, Activity, Box, Play,
+  Zap, Wrench, FileText,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
 import {
   AVATAR_PROVIDER_LABELS,
-  ROLE_SUGGESTIONS,
   SKILLS,
+  getAvatarSkills,
+  getAvatarSystemPrompt,
 } from "@/types";
 import type { LLMProvider } from "@/types";
 import { formatTime } from "@/lib/utils";
@@ -29,25 +30,19 @@ export function AvatarInfoPanel() {
   const setAvatarGenerationConsoleOpen = useStore((s) => s.setAvatarGenerationConsoleOpen);
   const availableClipNames = useStore((s) => s.availableClipNames);
   const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
-  const toggleAvatarSkill = useStore((s) => s.toggleAvatarSkill);
+  const roles = useStore((s) => s.roles);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState("");
+  const [roleId, setRoleId] = useState("");
   const [provider, setProvider] = useState<LLMProvider>("auria");
 
   // Sync local form state when selected avatar changes
   useEffect(() => {
     if (selectedAvatar) {
       setName(selectedAvatar.name);
-      setRole(selectedAvatar.role);
-      setApiKey(selectedAvatar.apiKey);
-      setSystemPrompt(selectedAvatar.systemPrompt);
+      setRoleId(selectedAvatar.roleId);
       setProvider(selectedAvatar.provider);
-      setShowKey(false);
       setTab("settings");
     }
   }, [selectedAvatar?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -56,22 +51,21 @@ export function AvatarInfoPanel() {
 
   const hasChanges =
     name !== selectedAvatar.name ||
-    role !== selectedAvatar.role ||
-    apiKey !== selectedAvatar.apiKey ||
-    systemPrompt !== selectedAvatar.systemPrompt ||
+    roleId !== selectedAvatar.roleId ||
     provider !== selectedAvatar.provider;
 
   const handleSave = () => {
-    updateAvatar(selectedAvatar.id, { name, role, apiKey, systemPrompt, provider });
+    updateAvatar(selectedAvatar.id, { name, roleId, provider });
   };
 
   const handleCancel = () => {
     setName(selectedAvatar.name);
-    setRole(selectedAvatar.role);
-    setApiKey(selectedAvatar.apiKey);
-    setSystemPrompt(selectedAvatar.systemPrompt);
+    setRoleId(selectedAvatar.roleId);
     setProvider(selectedAvatar.provider);
   };
+
+  const inheritedSkills = getAvatarSkills(selectedAvatar, roles);
+  const inheritedPrompt = getAvatarSystemPrompt(selectedAvatar, roles);
 
   const handleDelete = () => {
     removeAvatar(selectedAvatar.id);
@@ -158,21 +152,19 @@ export function AvatarInfoPanel() {
                     />
                   </label>
 
-                  {/* Role (free input with suggestions) */}
+                  {/* Role (select from roles) */}
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-text-muted">Role / Mission</span>
-                    <input
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      list="role-suggestions"
-                      placeholder="Ex: CTO / Lead Dev"
-                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                    />
-                    <datalist id="role-suggestions">
-                      {ROLE_SUGGESTIONS.map((r) => (
-                        <option key={r} value={r} />
+                    <span className="text-[10px] uppercase text-text-muted">Role</span>
+                    <select
+                      value={roleId}
+                      onChange={(e) => setRoleId(e.target.value)}
+                      className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
+                    >
+                      <option value="">— No role —</option>
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
                       ))}
-                    </datalist>
+                    </select>
                   </label>
 
                   {/* Provider */}
@@ -196,48 +188,23 @@ export function AvatarInfoPanel() {
                     </select>
                   </label>
 
-                  {/* System Prompt */}
-                  <label className="flex flex-col gap-1">
-                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                      <FileText className="h-2.5 w-2.5" />
-                      System Prompt
-                    </span>
-                    <textarea
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="Instructions for the LLM agent..."
-                      rows={4}
-                      className="resize-y rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                    />
-                  </label>
-
-                  {/* Skills */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                      <Wrench className="h-2.5 w-2.5" />
-                      Skills
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SKILLS.map((skill) => {
-                        const active = selectedAvatar.skillIds?.includes(skill.id);
-                        return (
-                          <button
+                  {/* Inherited Skills (readonly) */}
+                  {inheritedSkills.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                        <Wrench className="h-2.5 w-2.5" />
+                        Skills (from role)
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {SKILLS.filter((s) => inheritedSkills.includes(s.id)).map((skill) => (
+                          <span
                             key={skill.id}
-                            onClick={() => toggleAvatarSkill(selectedAvatar.id, skill.id)}
-                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors"
-                            style={
-                              active
-                                ? {
-                                    backgroundColor: `${skill.color}20`,
-                                    border: `1px solid ${skill.color}55`,
-                                    color: skill.color,
-                                  }
-                                : {
-                                    backgroundColor: "transparent",
-                                    border: "1px solid rgba(255,255,255,0.08)",
-                                    color: "rgba(255,255,255,0.35)",
-                                  }
-                            }
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px]"
+                            style={{
+                              backgroundColor: `${skill.color}20`,
+                              border: `1px solid ${skill.color}55`,
+                              color: skill.color,
+                            }}
                           >
                             <span
                               className="inline-flex items-center justify-center rounded px-1 text-[8px] font-bold leading-tight text-white"
@@ -246,35 +213,24 @@ export function AvatarInfoPanel() {
                               {skill.icon}
                             </span>
                             {skill.name}
-                          </button>
-                        );
-                      })}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* API Key */}
-                  <label className="flex flex-col gap-1">
-                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                      <KeyRound className="h-2.5 w-2.5" />
-                      API Key
-                    </span>
-                    <div className="flex gap-1">
-                      <input
-                        type={showKey ? "text" : "password"}
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="sk-..."
-                        className="min-w-0 flex-1 rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowKey(!showKey)}
-                        className="rounded border border-white/10 bg-bg-base/50 px-2 text-text-muted transition-colors hover:text-text-primary"
-                      >
-                        {showKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </button>
+                  {/* Inherited System Prompt (readonly) */}
+                  {inheritedPrompt && (
+                    <div className="flex flex-col gap-1">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                        <FileText className="h-2.5 w-2.5" />
+                        System Prompt (from role)
+                      </span>
+                      <div className="rounded border border-white/5 bg-bg-base/30 px-2.5 py-1.5 text-xs text-text-muted">
+                        {inheritedPrompt}
+                      </div>
                     </div>
-                  </label>
+                  )}
 
                   {/* Status + Level */}
                   <div className="flex items-center gap-3">

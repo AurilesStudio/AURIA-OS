@@ -3,6 +3,7 @@ import { IsometricScene } from "@/components/scene/IsometricScene";
 import { DashboardOverlay } from "@/components/layout/DashboardOverlay";
 import { AvatarInfoPanel } from "@/components/scene/AvatarInfoPanel";
 import { RoomManagerPanel } from "@/components/scene/RoomManagerPanel";
+import { RoleManagerPanel } from "@/components/scene/RoleManagerPanel";
 import { RecruitAgentModal } from "@/components/scene/RecruitAgentModal";
 import { AvatarGenerationConsole } from "@/components/scene/AvatarGenerationConsole";
 import { AuriaCommandPanel } from "@/components/scene/AuriaCommandPanel";
@@ -38,6 +39,7 @@ export default function App() {
       <div className="fixed bottom-4 left-4 z-30 flex items-end gap-2">
         <ProjectSelector />
         <TeamManagerPanel />
+        <RoleManagerPanel />
         <RoomManagerPanel />
         <button
           onClick={() => setRecruitOpen(true)}

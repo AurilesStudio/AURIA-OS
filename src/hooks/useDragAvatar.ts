@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import type { Mesh } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useThree } from "@react-three/fiber";
@@ -45,8 +45,20 @@ export function useDragAvatar(rooms: RoomData[]) {
   const updateAvatarPosition = useStore((s) => s.updateAvatarPosition);
   const avatars = useStore((s) => s.avatars);
 
-  // Access MapControls set with makeDefault to disable during drag
+  // Access OrbitControls set with makeDefault to disable during drag
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
+
+  // Safety net: if pointerUp fires outside the ground plane (e.g. pointer
+  // leaves the canvas), re-enable camera controls via a window listener.
+  useEffect(() => {
+    const restore = () => {
+      if (controls && !controls.enabled && dragAvatarId) {
+        controls.enabled = true;
+      }
+    };
+    window.addEventListener("pointerup", restore);
+    return () => window.removeEventListener("pointerup", restore);
+  }, [controls, dragAvatarId]);
 
   const handlePointerDown = useCallback(
     (avatarId: string, e: ThreeEvent<PointerEvent>) => {

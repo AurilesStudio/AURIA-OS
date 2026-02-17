@@ -11,6 +11,7 @@ export const mockGauges: TokenGaugeData[] = [
     used: 847_520,
     limit: 2_000_000,
     color: "#ff003c",
+    cost: 0,
   },
   {
     provider: "claude",
@@ -18,6 +19,7 @@ export const mockGauges: TokenGaugeData[] = [
     used: 1_234_567,
     limit: 5_000_000,
     color: "#bf00ff",
+    cost: 0,
   },
   {
     provider: "mistral",
@@ -25,6 +27,7 @@ export const mockGauges: TokenGaugeData[] = [
     used: 312_890,
     limit: 1_000_000,
     color: "#ff2d7a",
+    cost: 0,
   },
 ];
 

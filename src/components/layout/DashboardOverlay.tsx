@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { Home, MessageSquare, Users, Coins, Settings } from "lucide-react";
 import { TokenGaugesPanel } from "@/components/monitoring/TokenGaugesPanel";
 import { ActivityStream } from "@/components/activity/ActivityStream";
 import { OmniPrompt } from "@/components/command/OmniPrompt";
 import { QuickActions } from "@/components/command/QuickActions";
+import { ApiKeysSettings } from "@/components/settings/ApiKeysSettings";
+import { CameraToolbar } from "@/components/camera/CameraToolbar";
 
 type PanelId = "home" | "chat" | "agents" | "alerts" | "settings" | null;
 
@@ -12,7 +14,7 @@ const sidebarItems = [
   { id: "home" as const, icon: Home },
   { id: "chat" as const, icon: MessageSquare },
   { id: "agents" as const, icon: Users },
-  { id: "alerts" as const, icon: Bell },
+  { id: "alerts" as const, icon: Coins },
   { id: "settings" as const, icon: Settings },
 ] as const;
 
@@ -25,7 +27,7 @@ function SidebarPanel({ panelId }: { panelId: PanelId }) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -20, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="pointer-events-auto ml-2 w-72 overflow-y-auto"
+      className={`pointer-events-auto ml-2 overflow-y-auto ${panelId === "alerts" || panelId === "settings" ? "w-80" : "w-72"}`}
     >
       <div className="flex flex-col gap-3">
         {panelId === "home" && (
@@ -56,12 +58,13 @@ function SidebarPanel({ panelId }: { panelId: PanelId }) {
         )}
         {panelId === "settings" && (
           <div className="overlay-glass rounded-lg p-4">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
               Settings
             </h3>
-            <p className="text-xs text-text-muted">
-              AURIA-OS v0.1.0
-            </p>
+            <ApiKeysSettings />
+            <div className="mt-4 pt-3 border-t border-white/5">
+              <p className="text-[10px] text-text-muted">AURIA-OS v0.1.0</p>
+            </div>
           </div>
         )}
       </div>
@@ -106,6 +109,11 @@ export function DashboardOverlay() {
           />
         )}
       </AnimatePresence>
+
+      {/* Camera presets — bottom right */}
+      <div className="pointer-events-none fixed bottom-4 right-4">
+        <CameraToolbar />
+      </div>
     </div>
   );
 }

@@ -271,6 +271,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const groupRef = useRef<Group>(null);
   const selectedAvatarId = useStore((s) => s.selectedAvatarId);
   const rooms = useStore((s) => s.rooms);
+  const roles = useStore((s) => s.roles);
 
   const isSelected = selectedAvatarId === avatar.id;
   const isWalking = avatar.activeClip === "Walking";
@@ -348,7 +349,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
           <ProceduralAvatar color={outfit} skin={skin} ei={ei} />
         )}
 
-        <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={avatar.role} level={avatar.level} />
+        <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={roles.find((r) => r.id === avatar.roleId)?.name} level={avatar.level} />
       </group>
 
       <AvatarGlow visible={isSelected} status={avatar.status} />

@@ -14,7 +14,7 @@ export type ProjectStatus =
   | "Done"
   | "Cancelled";
 
-export type GaugeProvider = "gemini" | "claude" | "mistral";
+export type GaugeProvider = "gemini" | "claude" | "mistral" | "local";
 
 export interface TokenGaugeData {
   provider: GaugeProvider;
@@ -22,6 +22,7 @@ export interface TokenGaugeData {
   used: number;
   limit: number;
   color: string;
+  cost: number;
 }
 
 export interface ActivityEntry {
@@ -57,15 +58,18 @@ export type {
   AvatarData,
   RoomData,
   CharacterEntry,
+  CharacterTeam,
   TeamSlot,
   TeamTemplate,
   SkillData,
   Project,
+  RoleDefinition,
 } from "./avatar";
 
 export {
   CHARACTER_CATALOG,
-  ROLE_SUGGESTIONS,
+  CHARACTER_TEAMS,
+  DEFAULT_ROLES,
   AVATAR_PROVIDER_LABELS,
   SKILLS,
   ROOM_SIZE,
@@ -74,6 +78,8 @@ export {
   ROOM_BORDER_COLORS,
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
+  getAvatarSkills,
+  getAvatarSystemPrompt,
 } from "./avatar";
 
 export type { AppearanceEntry } from "./appearance";

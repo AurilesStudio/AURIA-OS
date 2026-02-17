@@ -7,6 +7,7 @@ import { IsometricRooms } from "./IsometricGrid";
 import { AvatarGroup } from "./AvatarGroup";
 import { SceneParticles } from "./SceneParticles";
 import { SceneProps } from "./SceneProps";
+import { CameraAnimator } from "./CameraAnimator";
 
 export function IsometricScene() {
   const selectAvatar = useStore((s) => s.selectAvatar);
@@ -29,21 +30,23 @@ export function IsometricScene() {
         style={{ background: "transparent" }}
       >
         {/*
-          Left-click drag on empty space → pan camera horizontally
-          Scroll → zoom in / out
-          Rotation disabled to keep isometric angle
+          MapControls — left-click = pan, right-click = rotate, scroll = zoom.
+          Same mouse mapping as before, but rotation is now enabled.
           makeDefault exposes controls via useThree — used by useDragAvatar
-          to disable panning while dragging an avatar.
+          to disable controls while dragging an avatar.
+          maxPolarAngle prevents going below the ground plane.
         */}
         <MapControls
           makeDefault
-          enableRotate={false}
+          enableRotate
           enableDamping
           dampingFactor={0.15}
           screenSpacePanning={false}
           minDistance={5}
           maxDistance={150}
+          maxPolarAngle={Math.PI / 2}
         />
+        <CameraAnimator />
         <SceneLighting />
         <SceneParticles />
         <IsometricRooms />

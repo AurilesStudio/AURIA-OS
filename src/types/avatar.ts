@@ -3,18 +3,25 @@
 export type AvatarRole = string;
 export type AvatarStatus = "idle" | "working" | "success" | "error";
 
-export type LLMProvider = "auria" | "claude" | "gemini" | "mistral";
+export type LLMProvider = "auria" | "claude" | "gemini" | "mistral" | "local";
 
-export const ROLE_SUGGESTIONS: string[] = [
-  "CEO / Visionnaire",
-  "Directeur Juridique",
-  "Directeur Artistique",
-  "CTO / Lead Dev",
-  "DevOps Engineer",
-  "Directeur Marketing",
-  "CFO / Finance",
-  "Data Analyst",
-  "Ops Manager",
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  skillIds: string[];
+  systemPrompt: string;
+}
+
+export const DEFAULT_ROLES: RoleDefinition[] = [
+  { id: "role-ceo",       name: "CEO / Visionnaire",       skillIds: [],                              systemPrompt: "" },
+  { id: "role-legal",     name: "Directeur Juridique",     skillIds: ["docs"],                        systemPrompt: "" },
+  { id: "role-art",       name: "Directeur Artistique",    skillIds: ["design", "frontend"],          systemPrompt: "" },
+  { id: "role-cto",       name: "CTO / Lead Dev",          skillIds: ["frontend", "backend", "devops"], systemPrompt: "" },
+  { id: "role-devops",    name: "DevOps Engineer",         skillIds: ["devops", "security"],          systemPrompt: "" },
+  { id: "role-marketing", name: "Directeur Marketing",     skillIds: [],                              systemPrompt: "" },
+  { id: "role-cfo",       name: "CFO / Finance",           skillIds: [],                              systemPrompt: "" },
+  { id: "role-data",      name: "Data Analyst",            skillIds: ["database", "backend"],         systemPrompt: "" },
+  { id: "role-ops",       name: "Ops Manager",             skillIds: ["testing", "docs"],             systemPrompt: "" },
 ];
 
 export interface AvatarAction {
@@ -24,12 +31,13 @@ export interface AvatarAction {
   error?: string;
   startedAt: Date;
   completedAt?: Date;
+  tokenUsage?: { inputTokens: number; outputTokens: number; cost: number };
 }
 
 export interface AvatarData {
   id: string;
   name: string;
-  role: AvatarRole;
+  roleId: string;
   provider: LLMProvider;
   color: string;
   modelUrl: string;
@@ -39,13 +47,37 @@ export interface AvatarData {
   history: AvatarAction[];
   position: [x: number, y: number, z: number];
   roomId: string;
-  apiKey: string;
   projectId: string;
   characterId: string;
-  systemPrompt: string;
-  skillIds: string[];
   level: number;
 }
+
+// ── Role Helpers ────────────────────────────────────────────
+
+export function getAvatarSkills(avatar: AvatarData, roles: RoleDefinition[]): string[] {
+  const role = roles.find((r) => r.id === avatar.roleId);
+  return role?.skillIds ?? [];
+}
+
+export function getAvatarSystemPrompt(avatar: AvatarData, roles: RoleDefinition[]): string {
+  const role = roles.find((r) => r.id === avatar.roleId);
+  return role?.systemPrompt ?? "";
+}
+
+// ── Character Teams ──────────────────────────────────────────
+
+export interface CharacterTeam {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;  // emoji or short label
+}
+
+export const CHARACTER_TEAMS: CharacterTeam[] = [
+  { id: "dragon-ball", name: "Dragon Ball", color: "#ff8c00", icon: "🐉" },
+  { id: "naruto",      name: "Naruto",      color: "#ff6b35", icon: "🍥" },
+  { id: "one-piece",   name: "One Piece",   color: "#e63946", icon: "🏴‍☠️" },
+];
 
 // ── Character Catalog ────────────────────────────────────────
 
@@ -54,20 +86,43 @@ export interface CharacterEntry {
   name: string;
   modelUrl: string;
   color: string;
+  teamId: string;
   rotationY?: number;
 }
 
 export const CHARACTER_CATALOG: CharacterEntry[] = [
-  { id: "goku",   name: "Goku",   modelUrl: "/models/goku.glb",   color: "#ff3c3c", rotationY: -Math.PI / 2 },
-  { id: "vegeta", name: "Vegeta", modelUrl: "/models/vegeta.glb", color: "#3c5eff", rotationY: -Math.PI / 2 },
-  { id: "gohan",  name: "Gohan",  modelUrl: "/models/Gohan.glb",        color: "#f5a623", rotationY: -Math.PI / 2 },
-  { id: "piccolo", name: "Piccolo", modelUrl: "/models/piccolo.glb",   color: "#2ecc71", rotationY: -Math.PI / 2 },
-  { id: "gogeta",  name: "Gogeta",  modelUrl: "/models/gogeta.glb",    color: "#ffffff", rotationY: -Math.PI / 2 },
-  { id: "vegeto",  name: "Vegeto",  modelUrl: "/models/vegeto.glb",    color: "#ff6b35", rotationY: -Math.PI / 2 },
-  { id: "trunks",  name: "Trunks",  modelUrl: "/models/trunks.glb",    color: "#9b59b6", rotationY: -Math.PI / 2 },
-  { id: "broly",      name: "Broly",      modelUrl: "/models/broly.glb",      color: "#27ae60", rotationY: -Math.PI / 2 },
-  { id: "black-goku", name: "Black Goku", modelUrl: "/models/black goku.glb", color: "#8b5cf6", rotationY: -Math.PI / 2 },
-  // Additional entries when user uploads GLBs
+  // ── Dragon Ball ──
+  { id: "goku",       name: "Goku",       modelUrl: "/models/goku.glb",       color: "#ff3c3c", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "vegeta",     name: "Vegeta",     modelUrl: "/models/vegeta.glb",     color: "#3c5eff", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "gohan",      name: "Gohan",      modelUrl: "/models/Gohan.glb",      color: "#f5a623", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "piccolo",    name: "Piccolo",    modelUrl: "/models/piccolo.glb",    color: "#2ecc71", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "gogeta",     name: "Gogeta",     modelUrl: "/models/gogeta.glb",     color: "#ffffff", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "vegeto",     name: "Vegeto",     modelUrl: "/models/vegeto.glb",     color: "#ff6b35", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "trunks",     name: "Trunks",     modelUrl: "/models/trunks.glb",     color: "#9b59b6", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "broly",      name: "Broly",      modelUrl: "/models/broly.glb",      color: "#27ae60", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+  { id: "black-goku", name: "Black Goku", modelUrl: "/models/black goku.glb", color: "#8b5cf6", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
+
+  // ── Naruto ──
+  { id: "naruto",    name: "Naruto",    modelUrl: "", color: "#ff9a3c", teamId: "naruto" },
+  { id: "sasuke",    name: "Sasuke",    modelUrl: "", color: "#3c4eff", teamId: "naruto" },
+  { id: "kakashi",   name: "Kakashi",   modelUrl: "", color: "#8e99a4", teamId: "naruto" },
+  { id: "sakura",    name: "Sakura",    modelUrl: "", color: "#ff69b4", teamId: "naruto" },
+  { id: "itachi",    name: "Itachi",    modelUrl: "", color: "#c0392b", teamId: "naruto" },
+  { id: "gaara",     name: "Gaara",     modelUrl: "", color: "#d35400", teamId: "naruto" },
+  { id: "shikamaru", name: "Shikamaru", modelUrl: "", color: "#5d6d7e", teamId: "naruto" },
+  { id: "jiraiya",   name: "Jiraiya",   modelUrl: "", color: "#e74c3c", teamId: "naruto" },
+  { id: "tsunade",   name: "Tsunade",   modelUrl: "", color: "#f1c40f", teamId: "naruto" },
+
+  // ── One Piece ──
+  { id: "luffy",   name: "Luffy",   modelUrl: "", color: "#e63946", teamId: "one-piece" },
+  { id: "zoro",    name: "Zoro",    modelUrl: "", color: "#2ecc71", teamId: "one-piece" },
+  { id: "sanji",   name: "Sanji",   modelUrl: "", color: "#f4d03f", teamId: "one-piece" },
+  { id: "nami",    name: "Nami",    modelUrl: "", color: "#ff8c42", teamId: "one-piece" },
+  { id: "robin",   name: "Robin",   modelUrl: "", color: "#8e44ad", teamId: "one-piece" },
+  { id: "chopper", name: "Chopper", modelUrl: "", color: "#ff69b4", teamId: "one-piece" },
+  { id: "franky",  name: "Franky",  modelUrl: "", color: "#3498db", teamId: "one-piece" },
+  { id: "brook",   name: "Brook",   modelUrl: "", color: "#bdc3c7", teamId: "one-piece" },
+  { id: "jinbe",   name: "Jinbe",   modelUrl: "", color: "#2980b9", teamId: "one-piece" },
 ];
 
 // ── Team Types ───────────────────────────────────────────────
@@ -76,8 +131,7 @@ export interface TeamSlot {
   roomId: string;
   characterId: string;
   provider: LLMProvider;
-  roleTitle: string;
-  systemPrompt: string;
+  roleId: string;
   avatarName?: string;
   color?: string;
 }
@@ -150,6 +204,7 @@ export const AVATAR_PROVIDER_LABELS: Record<LLMProvider, string> = {
   claude: "Claude (Anthropic)",
   gemini: "Gemini (Google)",
   mistral: "Mistral AI",
+  local: "Local (Ollama)",
 };
 
 // ── Project Types ─────────────────────────────────────────────

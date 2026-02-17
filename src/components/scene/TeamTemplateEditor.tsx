@@ -5,7 +5,6 @@ import { useStore } from "@/store/useStore";
 import {
   CHARACTER_CATALOG,
   AVATAR_PROVIDER_LABELS,
-  ROLE_SUGGESTIONS,
 } from "@/types";
 import type { LLMProvider, TeamSlot } from "@/types";
 
@@ -20,8 +19,7 @@ function emptySlot(roomId: string): TeamSlot {
     roomId,
     characterId: CHARACTER_CATALOG[0]?.id ?? "",
     provider: "claude" as LLMProvider,
-    roleTitle: "",
-    systemPrompt: "",
+    roleId: "",
   };
 }
 
@@ -32,6 +30,7 @@ export function TeamTemplateEditor({ open, onClose, templateId }: TeamTemplateEd
   const teamTemplates = useStore((s) => s.teamTemplates);
   const addTeamTemplate = useStore((s) => s.addTeamTemplate);
   const updateTeamTemplate = useStore((s) => s.updateTeamTemplate);
+  const roles = useStore((s) => s.roles);
 
   const [name, setName] = useState("");
   const [slots, setSlots] = useState<TeamSlot[]>([]);
@@ -148,7 +147,7 @@ export function TeamTemplateEditor({ open, onClose, templateId }: TeamTemplateEd
                             {AVATAR_PROVIDER_LABELS[slot.provider]}
                           </span>
                           <span className="flex-1 truncate text-right text-[10px] text-text-muted">
-                            {slot.roleTitle || "No role"}
+                            {roles.find((r) => r.id === slot.roleId)?.name || "No role"}
                           </span>
                           {isExpanded ? (
                             <ChevronUp className="h-3 w-3 text-text-muted" />
@@ -198,32 +197,18 @@ export function TeamTemplateEditor({ open, onClose, templateId }: TeamTemplateEd
                               {/* Role */}
                               <label className="flex flex-col gap-1">
                                 <span className="text-[9px] uppercase text-text-muted">Role</span>
-                                <input
-                                  value={slot.roleTitle}
-                                  onChange={(e) => updateSlot(idx, { roleTitle: e.target.value })}
-                                  list={`tpl-role-${idx}`}
-                                  placeholder="Ex: CTO"
-                                  className="rounded border border-white/10 bg-bg-base/50 px-2 py-1.5 text-[10px] text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                                />
-                                <datalist id={`tpl-role-${idx}`}>
-                                  {ROLE_SUGGESTIONS.map((r) => (
-                                    <option key={r} value={r} />
+                                <select
+                                  value={slot.roleId}
+                                  onChange={(e) => updateSlot(idx, { roleId: e.target.value })}
+                                  className="rounded border border-white/10 bg-bg-base/50 px-2 py-1.5 text-[10px] text-text-primary outline-none focus:border-white/20"
+                                >
+                                  <option value="">— No role —</option>
+                                  {roles.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
                                   ))}
-                                </datalist>
+                                </select>
                               </label>
                             </div>
-
-                            {/* System Prompt */}
-                            <label className="mt-2 flex flex-col gap-1">
-                              <span className="text-[9px] uppercase text-text-muted">System Prompt</span>
-                              <textarea
-                                value={slot.systemPrompt}
-                                onChange={(e) => updateSlot(idx, { systemPrompt: e.target.value })}
-                                placeholder="Instructions for the LLM agent..."
-                                rows={3}
-                                className="resize-y rounded border border-white/10 bg-bg-base/50 px-2 py-1.5 text-[10px] text-text-primary outline-none placeholder:text-text-muted/40 focus:border-white/20"
-                              />
-                            </label>
                           </div>
                         )}
                       </div>

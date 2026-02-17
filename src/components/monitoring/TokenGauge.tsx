@@ -10,7 +10,8 @@ interface TokenGaugeProps {
 const RADIUS = 45;
 const STROKE = 6;
 const CIRCUMFERENCE = Math.PI * RADIUS; // half-circle arc
-const VIEW_SIZE = 120;
+const VB_W = 120;
+const VB_H = 78; // 120 * 0.65
 
 export function TokenGauge({ data, index }: TokenGaugeProps) {
   const pct = Math.min(data.used / data.limit, 1);
@@ -21,17 +22,15 @@ export function TokenGauge({ data, index }: TokenGaugeProps) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="flex flex-col items-center gap-2"
+      className="flex flex-col items-center gap-1 min-w-0"
     >
       <svg
-        width={VIEW_SIZE}
-        height={VIEW_SIZE * 0.65}
-        viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE * 0.65}`}
-        className="overflow-visible"
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        className="w-full max-w-[110px] overflow-visible"
       >
         {/* Background arc */}
         <path
-          d={`M ${VIEW_SIZE * 0.1} ${VIEW_SIZE * 0.58} A ${RADIUS} ${RADIUS} 0 0 1 ${VIEW_SIZE * 0.9} ${VIEW_SIZE * 0.58}`}
+          d={`M ${VB_W * 0.1} ${VB_W * 0.58} A ${RADIUS} ${RADIUS} 0 0 1 ${VB_W * 0.9} ${VB_W * 0.58}`}
           fill="none"
           stroke="rgba(255,255,255,0.06)"
           strokeWidth={STROKE}
@@ -39,7 +38,7 @@ export function TokenGauge({ data, index }: TokenGaugeProps) {
         />
         {/* Foreground arc */}
         <motion.path
-          d={`M ${VIEW_SIZE * 0.1} ${VIEW_SIZE * 0.58} A ${RADIUS} ${RADIUS} 0 0 1 ${VIEW_SIZE * 0.9} ${VIEW_SIZE * 0.58}`}
+          d={`M ${VB_W * 0.1} ${VB_W * 0.58} A ${RADIUS} ${RADIUS} 0 0 1 ${VB_W * 0.9} ${VB_W * 0.58}`}
           fill="none"
           stroke={data.color}
           strokeWidth={STROKE}
@@ -54,23 +53,28 @@ export function TokenGauge({ data, index }: TokenGaugeProps) {
         />
         {/* Percentage text */}
         <text
-          x={VIEW_SIZE / 2}
-          y={VIEW_SIZE * 0.45}
+          x={VB_W / 2}
+          y={VB_W * 0.45}
           textAnchor="middle"
-          className="fill-text-primary text-lg font-bold"
+          className="fill-text-primary font-bold"
           style={{ fontSize: "16px", fontFamily: "JetBrains Mono, monospace" }}
         >
           {Math.round(pct * 100)}%
         </text>
       </svg>
 
-      <div className="text-center">
-        <p className="text-xs font-semibold" style={{ color: data.color }}>
+      <div className="text-center min-w-0">
+        <p className="text-xs font-semibold truncate" style={{ color: data.color }}>
           {data.label}
         </p>
-        <p className="text-xs text-text-muted">
+        <p className="text-[11px] text-text-muted whitespace-nowrap">
           {formatTokenCount(data.used)} / {formatTokenCount(data.limit)}
         </p>
+        {data.cost > 0 && (
+          <p className="text-[11px] font-mono font-semibold text-text-secondary mt-0.5">
+            ${data.cost.toFixed(2)}
+          </p>
+        )}
       </div>
     </motion.div>
   );
