@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Cpu, Clock, ArrowRightLeft,
   Trash2, Settings, Activity, Box, Play,
-  Zap, Wrench, FileText,
+  Zap, Wrench, FileText, Focus,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
@@ -31,6 +31,7 @@ export function AvatarInfoPanel() {
   const availableClipNames = useStore((s) => s.availableClipNames);
   const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
   const roles = useStore((s) => s.roles);
+  const setCameraTarget = useStore((s) => s.setCameraTarget);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
@@ -102,12 +103,27 @@ export function AvatarInfoPanel() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => select(null)}
-                className="text-text-muted transition-colors hover:text-text-primary"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    const [ax, , az] = selectedAvatar.position;
+                    setCameraTarget({
+                      position: [ax + 5, 4, az + 5] as [number, number, number],
+                      target: [ax, 0, az] as [number, number, number],
+                    });
+                  }}
+                  title="Focus camera"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-white/10 hover:text-text-primary"
+                >
+                  <Focus className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => select(null)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:text-text-primary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* ── Tabs ───────────────────────────────── */}

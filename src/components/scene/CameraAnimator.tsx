@@ -7,8 +7,8 @@ const _v = new Vector3();
 const _t = new Vector3();
 
 // Frame-rate independent smoothing: higher = snappier, lower = softer
-const SMOOTH_SPEED = 4;
-const DONE_THRESHOLD = 0.01;
+const SMOOTH_SPEED = 3;
+const DONE_THRESHOLD = 0.005;
 
 export function CameraAnimator() {
   const cameraTarget = useStore((s) => s.cameraTarget);

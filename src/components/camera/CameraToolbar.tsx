@@ -33,11 +33,8 @@ function useProjectCenter(): { cx: number; cz: number } {
 
 function AvatarFocusPicker({ onClose }: { onClose: () => void }) {
   const avatars = useStore((s) => s.avatars);
-  const activeProjectId = useStore((s) => s.activeProjectId);
   const setCameraTarget = useStore((s) => s.setCameraTarget);
   const ref = useRef<HTMLDivElement>(null);
-
-  const projectAvatars = avatars.filter((a) => a.projectId === activeProjectId);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -47,17 +44,17 @@ function AvatarFocusPicker({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener("pointerdown", handleClick);
   }, [onClose]);
 
-  if (projectAvatars.length === 0) {
+  if (avatars.length === 0) {
     return (
       <div ref={ref} className="absolute bottom-full right-0 mb-2 w-48 rounded-lg bg-bg-surface/90 border border-white/5 backdrop-blur-sm p-2">
-        <p className="text-xs text-text-muted px-2 py-1">No avatars in this project.</p>
+        <p className="text-xs text-text-muted px-2 py-1">No avatars deployed.</p>
       </div>
     );
   }
 
   return (
     <div ref={ref} className="absolute bottom-full right-0 mb-2 w-48 rounded-lg bg-bg-surface/90 border border-white/5 backdrop-blur-sm p-1">
-      {projectAvatars.map((a) => (
+      {avatars.map((a) => (
         <button
           key={a.id}
           onClick={() => {
@@ -97,7 +94,7 @@ export function CameraToolbar() {
       {
         label: "Top-Down",
         icon: ArrowDown,
-        position: [cx, 40, cz + 0.1],
+        position: [cx, 40, cz + 1],
         target: [cx, 0, cz],
       },
       {

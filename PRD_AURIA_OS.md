@@ -46,8 +46,8 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 ### 4.5. Caméra Libre & Presets de Vues
 - **Contrôles caméra :** MapControls avec rotation activée — clic gauche = pan, clic droit = rotation, scroll = zoom. Le passage sous le sol est bloqué (maxPolarAngle).
 - **Presets de vue :** Toolbar flottante en bas à droite avec 4 presets (Isometric, Top-Down, Front, Side). Chaque preset est calculé dynamiquement par rapport au centre du projet actif.
-- **Focus avatar :** Bouton dédié ouvrant un picker listant les avatars du projet actif. Au clic, la caméra s'anime en douceur vers l'avatar sélectionné (vue rapprochée).
-- **Transitions animées :** CameraAnimator avec interpolation exponentielle frame-rate independent (ease-out smooth). L'utilisateur peut interrompre une animation à tout moment en touchant la caméra.
+- **Focus avatar :** Deux accès — bouton Focus dans la toolbar (picker listant tous les avatars déployés) et bouton Focus dans le header du panneau info avatar (focus direct sur l'avatar sélectionné).
+- **Transitions animées :** CameraAnimator avec interpolation exponentielle frame-rate independent (ease-out smooth, speed=3). L'utilisateur peut interrompre une animation à tout moment en touchant la caméra.
 - **Sécurité drag :** Listener window-level `pointerup` pour garantir que les contrôles caméra se réactivent même si le pointeur sort de la zone de drag.
 
 ### 4.6. Intégration LLM Multi-Provider
@@ -80,6 +80,7 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 - **Zero-Refresh :** Toutes les données doivent arriver en "Push".
 - **Glass Morphism :** Panneaux overlay avec `backdrop-blur` et bordures semi-transparentes.
 - **Caméra Toolbar :** Boutons compacts avec icônes Lucide, séparateur visuel entre presets et focus avatar.
+- **Rooms :** Bordures neon subtiles (opacité réduite 0.12/0.04) pour un rendu épuré sans surcharge visuelle.
 
 ## 6. Roadmap Phase 1 (MVP)
 1. ~~Setup Skeleton React + Tailwind.~~

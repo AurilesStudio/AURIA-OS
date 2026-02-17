@@ -38,18 +38,18 @@ function IsometricRoom({ room, roomNumber }: { room: RoomData; roomNumber: numbe
       <Line
         points={points}
         color={room.borderColor}
-        lineWidth={2.5}
+        lineWidth={2}
         transparent
-        opacity={0.5}
+        opacity={0.12}
       />
 
       {/* Neon glow border (wider, transparent, underneath) */}
       <Line
         points={points}
         color={room.borderColor}
-        lineWidth={6}
+        lineWidth={4}
         transparent
-        opacity={0.15}
+        opacity={0.04}
       />
 
       {/* Room number — large, centered, neon glow */}
