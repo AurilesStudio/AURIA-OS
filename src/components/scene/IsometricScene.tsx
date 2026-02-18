@@ -7,6 +7,7 @@ import { IsometricRooms } from "./IsometricGrid";
 import { AvatarGroup } from "./AvatarGroup";
 import { SceneParticles } from "./SceneParticles";
 import { SceneProps } from "./SceneProps";
+import { TradingSceneProps } from "./TradingSceneProps";
 import { CameraAnimator } from "./CameraAnimator";
 
 export function IsometricScene() {
@@ -51,6 +52,7 @@ export function IsometricScene() {
         <SceneParticles />
         <IsometricRooms />
         <SceneProps />
+        <TradingSceneProps />
         <Suspense fallback={null}>
           <AvatarGroup />
         </Suspense>

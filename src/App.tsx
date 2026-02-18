@@ -9,6 +9,7 @@ import { AvatarGenerationConsole } from "@/components/scene/AvatarGenerationCons
 import { AuriaCommandPanel } from "@/components/scene/AuriaCommandPanel";
 import { SkillsAssignmentPanel } from "@/components/scene/SkillsAssignmentPanel";
 import { useStore } from "@/store/useStore";
+import { DecisionCardOverlay } from "@/components/trading/DecisionCardOverlay";
 import { ProjectSelector } from "@/components/scene/ProjectSelector";
 import { TeamManagerPanel } from "@/components/scene/TeamManagerPanel";
 import { UserPlus } from "lucide-react";
@@ -64,6 +65,9 @@ export default function App() {
 
       {/* z-40 — Skills assignment panel */}
       <SkillsAssignmentPanel />
+
+      {/* z-40 — Trading decision card overlay */}
+      <DecisionCardOverlay />
     </>
   );
 }

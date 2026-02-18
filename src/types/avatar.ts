@@ -22,6 +22,9 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
   { id: "role-cfo",       name: "CFO / Finance",           skillIds: [],                              systemPrompt: "" },
   { id: "role-data",      name: "Data Analyst",            skillIds: ["database", "backend"],         systemPrompt: "" },
   { id: "role-ops",       name: "Ops Manager",             skillIds: ["testing", "docs"],             systemPrompt: "" },
+  { id: "role-market-watcher", name: "Market Surveillance", skillIds: [],                              systemPrompt: "Surveille les flux marché en temps réel." },
+  { id: "role-risk-analyst",   name: "Risk Analysis",       skillIds: [],                              systemPrompt: "Évalue le ratio risque/rendement de chaque opportunité." },
+  { id: "role-executor",       name: "Order Execution",     skillIds: [],                              systemPrompt: "Exécute les ordres validés sur le marché." },
 ];
 
 export interface AvatarAction {
@@ -112,11 +115,12 @@ export const CHARACTER_CATALOG: CharacterEntry[] = [
   { id: "shikamaru", name: "Shikamaru", modelUrl: "", color: "#5d6d7e", teamId: "naruto" },
   { id: "jiraiya",   name: "Jiraiya",   modelUrl: "", color: "#e74c3c", teamId: "naruto" },
   { id: "tsunade",   name: "Tsunade",   modelUrl: "", color: "#f1c40f", teamId: "naruto" },
+  { id: "madara",    name: "Madara",    modelUrl: "", color: "#6b21a8", teamId: "naruto" },
 
   // ── One Piece ──
-  { id: "luffy",   name: "Luffy",   modelUrl: "", color: "#e63946", teamId: "one-piece" },
-  { id: "zoro",    name: "Zoro",    modelUrl: "", color: "#2ecc71", teamId: "one-piece" },
-  { id: "sanji",   name: "Sanji",   modelUrl: "", color: "#f4d03f", teamId: "one-piece" },
+  { id: "luffy",   name: "Luffy",   modelUrl: "/models/luffy.glb", color: "#e63946", teamId: "one-piece", rotationY: -Math.PI / 2 },
+  { id: "zoro",    name: "Zoro",    modelUrl: "/models/zoro.glb", color: "#2ecc71", teamId: "one-piece", rotationY: -Math.PI / 2 },
+  { id: "sanji",   name: "Sanji",   modelUrl: "/models/sanji.glb", color: "#f4d03f", teamId: "one-piece", rotationY: -Math.PI / 2 },
   { id: "nami",    name: "Nami",    modelUrl: "", color: "#ff8c42", teamId: "one-piece" },
   { id: "robin",   name: "Robin",   modelUrl: "", color: "#8e44ad", teamId: "one-piece" },
   { id: "chopper", name: "Chopper", modelUrl: "", color: "#ff69b4", teamId: "one-piece" },
@@ -212,4 +216,8 @@ export const AVATAR_PROVIDER_LABELS: Record<LLMProvider, string> = {
 export interface Project {
   id: string;
   name: string;
+  layoutType?: "standard" | "trading";
 }
+
+/** Trading rooms use a larger footprint */
+export const TRADING_ROOM_SIZE = { width: 14, depth: 10 } as const;

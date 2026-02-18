@@ -20,6 +20,7 @@ import {
   ROOM_BORDER_COLORS,
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
+  TRADING_ROOM_SIZE,
   CHARACTER_CATALOG,
   DEFAULT_ROLES,
 } from "@/types";
@@ -39,7 +40,7 @@ import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
 // ── Default projects ─────────────────────────────────────────
 const defaultProjects: Project[] = [
   { id: "project-1", name: "SAAS Projects" },
-  { id: "project-2", name: "Trading" },
+  { id: "project-2", name: "Trading", layoutType: "trading" },
   { id: "project-3", name: "Prospectauri" },
 ];
 
@@ -50,32 +51,36 @@ const GRID_ORIGIN_Z = 0.6;
 // Gap between project zones in Z
 const PROJECT_ZONE_GAP = 5;
 
+// Trading room spacing (center-to-center, horizontal)
+const TRADING_ROOM_SPACING_X = 17;
+
 /**
  * Compute the grid origin for a project.
- * Layout:  P1 (top-left)   P2 (top-right)
- *                P3 (centered below)
- * For projects beyond 3, they tile in rows of 2, centered.
+ * Layout (2 columns):
+ *   P1 (left)   P2 (right)
+ *   P3 (left)   P4 (right)
+ *
+ * The visual gap between project frames is identical on both axes.
+ * Z gap = zoneDepth − 2·ROOM_SPACING_Z − ROOM_SIZE.depth  (= 8)
+ * X zoneWidth is set so the edge-to-edge gap equals the Z gap,
+ * accounting for standard rooms on the left (half-width 5)
+ * and trading rooms on the right (half-width 7).
  */
 function getProjectGridOrigin(
   projectId: string,
   allProjects: Project[],
 ): { x: number; z: number } {
   const idx = allProjects.findIndex((p) => p.id === projectId);
-  const zoneWidth = 3 * ROOM_SPACING_X + PROJECT_ZONE_GAP;   // 54 — horizontal origin-to-origin
-  const zoneDepth = 3 * ROOM_SPACING_Z + PROJECT_ZONE_GAP;   // 48 — vertical origin-to-origin
+  const zGap = PROJECT_ZONE_GAP + 3 * ROOM_SPACING_Z - 2 * ROOM_SPACING_Z - ROOM_SIZE.depth;
+  // zoneWidth so that right-edge of col-0 + zGap = left-edge of col-1
+  const zoneWidth = 2 * ROOM_SPACING_X + ROOM_SIZE.width / 2 + TRADING_ROOM_SIZE.width / 2 + zGap;
+  const zoneDepth = 3 * ROOM_SPACING_Z + PROJECT_ZONE_GAP;
 
-  // Row 0: indices 0, 1  — side by side
-  // Row 1: index 2        — centered between 0 and 1
-  // Row N: pairs, last odd one centered
-  const row = idx < 2 ? 0 : 1 + Math.floor((idx - 2) / 2);
-  const colInRow = idx < 2 ? idx : (idx - 2) % 2;
-  const rowSize = idx < 2 ? 2 : (idx === allProjects.length - 1 && (allProjects.length - 2) % 2 === 1) ? 1 : 2;
-
-  const rowWidth = (rowSize - 1) * zoneWidth;
-  const rowStartX = GRID_ORIGIN_X + ((zoneWidth - rowWidth) / 2); // center row relative to 2-wide row
+  const col = idx % 2;
+  const row = Math.floor(idx / 2);
 
   return {
-    x: rowStartX + colInRow * zoneWidth,
+    x: GRID_ORIGIN_X + col * zoneWidth,
     z: GRID_ORIGIN_Z + row * zoneDepth,
   };
 }
@@ -105,8 +110,31 @@ const DEFAULT_ROOM_IDS: Record<string, string[]> = {
   ],
 };
 
+/** Generate 3 trading sub-rooms in a 1×3 horizontal layout */
+function buildTradingRooms(projectId: string): RoomData[] {
+  const origin = getProjectGridOrigin(projectId, defaultProjects);
+  // Offset Z so the top edge of trading rooms aligns with the top edge of standard rooms
+  const topAlignZ = origin.z + (TRADING_ROOM_SIZE.depth - ROOM_SIZE.depth) / 2;
+  const tradingRoomDefs = [
+    { id: "room-oracle", label: "The Oracle", borderColor: "#00ffcc" },
+    { id: "room-forge",  label: "The Strategy Forge", borderColor: "#f59e0b" },
+    { id: "room-safe",   label: "The Safe", borderColor: "#ff003c" },
+  ];
+  return tradingRoomDefs.map((def, i) => ({
+    id: def.id,
+    label: def.label,
+    position: [origin.x + i * TRADING_ROOM_SPACING_X, 0, topAlignZ] as [number, number, number],
+    borderColor: def.borderColor,
+    skillIds: [],
+    projectId,
+  }));
+}
+
 /** Generate 9 default rooms for a project at its grid origin */
 function buildDefaultRooms(projectId: string): RoomData[] {
+  const project = defaultProjects.find((p) => p.id === projectId);
+  if (project?.layoutType === "trading") return buildTradingRooms(projectId);
+
   const origin = getProjectGridOrigin(projectId, defaultProjects);
   const ids = DEFAULT_ROOM_IDS[projectId];
   return DEFAULT_ROOM_LABELS.map((label, i) => {
@@ -265,6 +293,10 @@ interface AuriaStore {
   setAvatarStatus: (avatarId: string, status: AvatarStatus) => void;
   moveAvatarToRoom: (avatarId: string, roomId: string) => void;
   updateAvatarPosition: (avatarId: string, position: [number, number, number]) => void;
+
+  // Trading
+  tradingKillSwitch: boolean;
+  toggleKillSwitch: () => void;
 
   // Camera presets
   cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
@@ -631,23 +663,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     })),
 
   // ── Avatar slice ──────────────────────────────────────────
-  avatars: [{
-    id: "avatar-auria",
-    name: "Goku",
-    roleId: "role-cto",
-    provider: "auria" as const,
-    color: "#ff3c3c",
-    modelUrl: "/models/goku.glb",
-    activeClip: "Happy Idle",
-    status: "idle" as const,
-    currentAction: null,
-    history: [],
-    position: [GRID_ORIGIN_X - 1.2, 0, GRID_ORIGIN_Z + 0.5],
-    roomId: "room-dev",
-    projectId: "project-1",
-    characterId: "goku",
-    level: 0,
-  }],
+  avatars: [],
   selectedAvatarId: null,
 
   selectAvatar: (id) => set({ selectedAvatarId: id }),
@@ -666,8 +682,10 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       // Place in the target room
       const room = state.rooms.find((r) => r.id === opts.roomId);
       if (!room) return state;
-      const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
-      const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
+      const project = state.workspaceProjects.find((p) => p.id === room.projectId);
+      const rSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+      const ox = (Math.random() - 0.5) * (rSize.width * 0.4);
+      const oz = (Math.random() - 0.5) * (rSize.depth * 0.4);
 
       const avatar: AvatarData = {
         id: `avatar-${generateId()}`,
@@ -801,8 +819,10 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     set((state) => {
       const room = state.rooms.find((r) => r.id === roomId);
       if (!room) return state;
-      const ox = (Math.random() - 0.5) * (ROOM_SIZE.width * 0.4);
-      const oz = (Math.random() - 0.5) * (ROOM_SIZE.depth * 0.4);
+      const project = state.workspaceProjects.find((p) => p.id === room.projectId);
+      const rSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+      const ox = (Math.random() - 0.5) * (rSize.width * 0.4);
+      const oz = (Math.random() - 0.5) * (rSize.depth * 0.4);
       const position: [number, number, number] = [
         room.position[0] + ox,
         0,
@@ -821,6 +841,10 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         a.id === avatarId ? { ...a, position } : a,
       ),
     })),
+
+  // ── Trading ──────────────────────────────────────────────────
+  tradingKillSwitch: false,
+  toggleKillSwitch: () => set((state) => ({ tradingKillSwitch: !state.tradingKillSwitch })),
 
   // ── Camera presets ──────────────────────────────────────────
   cameraTarget: null,
@@ -967,6 +991,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     workspaceProjects: state.workspaceProjects,
     activeProjectId: state.activeProjectId,
     teamTemplates: state.teamTemplates,
+    tradingKillSwitch: state.tradingKillSwitch,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
@@ -991,6 +1016,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       workspaceProjects?: Project[];
       activeProjectId?: string;
       teamTemplates?: TeamTemplate[];
+      tradingKillSwitch?: boolean;
     } | undefined;
     if (!saved) return current;
 
@@ -1048,9 +1074,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     // Merge team templates
     const teamTemplates = saved.teamTemplates ?? current.teamTemplates;
 
+    // Merge trading state
+    const tradingKillSwitch = saved.tradingKillSwitch ?? current.tradingKillSwitch;
+
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch };
     }
 
     // Build map of default avatars for merging
@@ -1092,6 +1121,6 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       };
     });
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch };
   },
 }));

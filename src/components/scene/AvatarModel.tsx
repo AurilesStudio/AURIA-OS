@@ -7,7 +7,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import type { Group } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { AvatarData } from "@/types";
-import { ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
+import { ROOM_SIZE, TRADING_ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
 import { AvatarGlow } from "./AvatarGlow";
@@ -272,11 +272,16 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const selectedAvatarId = useStore((s) => s.selectedAvatarId);
   const rooms = useStore((s) => s.rooms);
   const roles = useStore((s) => s.roles);
+  const workspaceProjects = useStore((s) => s.workspaceProjects);
 
   const isSelected = selectedAvatarId === avatar.id;
   const isWalking = avatar.activeClip === "Walking";
 
   useAvatarAction(avatar.id);
+
+  // Determine room size based on project layout type
+  const project = workspaceProjects.find((p) => p.id === avatar.projectId);
+  const roomSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
 
   // Patrol state
   const patrol = useRef({
@@ -295,8 +300,8 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
 
   const pickNewTarget = () => {
     if (!room) return;
-    const halfW = ROOM_SIZE.width / 2 - PATROL_MARGIN;
-    const halfD = ROOM_SIZE.depth / 2 - PATROL_MARGIN;
+    const halfW = roomSize.width / 2 - PATROL_MARGIN;
+    const halfD = roomSize.depth / 2 - PATROL_MARGIN;
     patrol.current.targetX = room.position[0] + (Math.random() - 0.5) * 2 * halfW;
     patrol.current.targetZ = room.position[2] + (Math.random() - 0.5) * 2 * halfD;
     patrol.current.needsNewTarget = false;

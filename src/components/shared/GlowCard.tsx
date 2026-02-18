@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface GlowCardProps {
   children: React.ReactNode;
   className?: string;
-  glowColor?: "red" | "purple" | "pink";
+  glowColor?: "red" | "purple" | "pink" | "cyan" | "amber";
 }
 
 export function GlowCard({
@@ -17,6 +17,8 @@ export function GlowCard({
         red: "hover:glow-red",
         purple: "hover:glow-purple",
         pink: "hover:glow-pink",
+        cyan: "hover:glow-cyan",
+        amber: "hover:glow-amber",
       }[glowColor]
     : undefined;
 

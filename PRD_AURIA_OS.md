@@ -97,6 +97,52 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 6. ~~Système de rôles personnalisables avec system prompts.~~
 7. ~~Panneau settings centralisé (clés API, Ollama, Tripo3D).~~
 8. ~~Team templates (sauvegarde/déploiement d'équipes entre projets).~~
+9. ~~Trading Room immersive (3 sub-rooms, agents dédiés, UI trading mock, props 3D).~~
+
+### 4.10. Trading Room (Projet Trading)
+Le projet "Trading" (project-2) dispose d'un layout immersif spécialisé, distinct du layout standard 9 rooms.
+
+#### Architecture
+- **Layout dédié :** `layoutType: "trading"` sur le projet, avec 3 sub-rooms spécialisées en ligne horizontale (1×3) au lieu de la grille 3×3 standard.
+- **Rooms élargies :** Footprint 14×10 (`TRADING_ROOM_SIZE`) contre 10×8 pour les rooms standard, avec spacing de 17 entre centres.
+- **Alignement :** Les rooms Trading sont alignées horizontalement avec les rooms SAAS (même bord supérieur), à droite du projet SAAS avec un gap visuel identique au gap vertical entre projets.
+
+#### 3 Sub-rooms
+| Room | ID | Couleur | Glyphe | Prop 3D |
+|------|----|---------|--------|---------|
+| The Oracle | `room-oracle` | Cyan (#00ffcc) | EYE | Hologramme diamant rotatif semi-transparent |
+| The Strategy Forge | `room-forge` | Amber (#f59e0b) | FORGE | Enclume lumineuse avec marteau |
+| The Safe | `room-safe` | Rouge (#ff003c) | SAFE | Porte de coffre-fort cylindrique |
+
+#### 3 Agents Trading (Naruto)
+| Agent | Rôle | Description |
+|-------|------|-------------|
+| Madara | Market Surveillance (`role-market-watcher`) | Surveille les flux marché en temps réel |
+| Itachi | Risk Analysis (`role-risk-analyst`) | Évalue le ratio risque/rendement |
+| Sasuke | Order Execution (`role-executor`) | Exécute les ordres validés |
+
+#### UI Trading
+- **Onglet Trading :** Nouvel onglet dans la sidebar (icône TrendingUp) avec panneau dédié (`w-80`).
+- **System Health :** Statut API Binance (connected/degraded/disconnected), latence ms, nombre de stratégies actives, Kill Switch (toggle rouge pulsant).
+- **Live Ticker :** 5 paires (BTC, ETH, SOL, BNB, XRP/USDT) avec prix, variation % colorée (vert/rouge), animation sur changement.
+- **Decision Card :** Carte amber affichant les opportunités détectées (paire, type LONG/SHORT, entry/target/stop loss, R/R, confidence %) avec boutons Validate (cyan) / Reject (rouge). Overlay en haut à droite de l'écran.
+- **Kill Switch :** Persisted dans le store, coupe les mises à jour de prix et la génération d'opportunités quand actif.
+
+#### Données actuelles (Mock)
+- Prix : random walk toutes les 2.5s avec volatilité simulée.
+- Opportunités : générées aléatoirement (~8% de chance par tick).
+- System Health : latence jitter (30-70ms), statut Binance fixe "connected".
+
+#### Reste à finaliser (Trading)
+1. **Connexion Binance WebSocket :** Remplacer le mock `setInterval` par un vrai flux WebSocket Binance pour les prix temps réel.
+2. **Stratégies de trading réelles :** Implémenter les algorithmes de détection d'opportunités (remplacer la génération aléatoire).
+3. **Exécution d'ordres :** Connecter le bouton Validate à l'API Binance pour passer de vrais ordres.
+4. **Historique des trades :** Ajouter un journal des opportunités validées/rejetées avec P&L.
+5. **Alertes Telegram :** Notifications push quand une opportunité est détectée ou qu'un ordre est exécuté.
+6. **Agent autonomie :** Permettre aux agents Madara/Itachi/Sasuke d'analyser et exécuter via LLM avec validation AURIA.
+7. **Graphiques candlestick :** Ajouter des mini-charts dans le Live Ticker ou sur le prop 3D Oracle.
+8. **Portfolio tracker :** Affichage du portefeuille global (positions ouvertes, P&L réalisé/non réalisé).
+9. **Risk management avancé :** Limites de drawdown, sizing automatique, corrélation inter-paires.
 
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
@@ -104,3 +150,4 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 3. Linear / Notion / GitHub sync temps réel.
 4. Persistance serveur (Supabase) en remplacement du localStorage.
 5. Mode mobile (Telegram bridge).
+6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.

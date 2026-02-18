@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, MessageSquare, Users, Coins, Settings } from "lucide-react";
+import { Home, MessageSquare, Users, Coins, Settings, TrendingUp } from "lucide-react";
 import { TokenGaugesPanel } from "@/components/monitoring/TokenGaugesPanel";
 import { ActivityStream } from "@/components/activity/ActivityStream";
 import { OmniPrompt } from "@/components/command/OmniPrompt";
 import { QuickActions } from "@/components/command/QuickActions";
 import { ApiKeysSettings } from "@/components/settings/ApiKeysSettings";
 import { CameraToolbar } from "@/components/camera/CameraToolbar";
+import { TradingPanel } from "@/components/trading/TradingPanel";
 
-type PanelId = "home" | "chat" | "agents" | "alerts" | "settings" | null;
+type PanelId = "home" | "chat" | "agents" | "alerts" | "trading" | "settings" | null;
 
 const sidebarItems = [
   { id: "home" as const, icon: Home },
   { id: "chat" as const, icon: MessageSquare },
   { id: "agents" as const, icon: Users },
   { id: "alerts" as const, icon: Coins },
+  { id: "trading" as const, icon: TrendingUp },
   { id: "settings" as const, icon: Settings },
 ] as const;
 
@@ -27,7 +29,7 @@ function SidebarPanel({ panelId }: { panelId: PanelId }) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -20, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className={`pointer-events-auto ml-2 overflow-y-auto ${panelId === "alerts" || panelId === "settings" ? "w-80" : "w-72"}`}
+      className={`pointer-events-auto ml-2 overflow-y-auto ${panelId === "alerts" ? "w-96" : panelId === "settings" || panelId === "trading" ? "w-80" : "w-72"}`}
     >
       <div className="flex flex-col gap-3">
         {panelId === "home" && (
@@ -54,6 +56,11 @@ function SidebarPanel({ panelId }: { panelId: PanelId }) {
         {panelId === "alerts" && (
           <div className="overlay-glass rounded-lg">
             <TokenGaugesPanel />
+          </div>
+        )}
+        {panelId === "trading" && (
+          <div className="overlay-glass rounded-lg p-4">
+            <TradingPanel />
           </div>
         )}
         {panelId === "settings" && (
