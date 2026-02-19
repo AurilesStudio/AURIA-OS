@@ -25,7 +25,10 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 - **Quick Actions :** Boutons "Git Pull & Restart", "Run Tests", "Check Linear High Priority".
 
 ### 4.3. Système de Team (9 avatars par projet)
-- **Character Catalog :** Bibliothèque de 9 personnages 3D (Goku, Vegeta, Gohan, Piccolo, Gogeta, Vegeto, Trunks, Broly, Black Goku) — un avatar par room, découplés du provider LLM.
+- **Character Catalog :** Bibliothèque de personnages 3D répartis en 3 teams (Dragon Ball, Naruto, One Piece). Chaque personnage avec modèle GLB est directement utilisable comme avatar dans les rooms, découplé du provider LLM.
+  - **Dragon Ball (9) :** Goku, Vegeta, Gohan, Piccolo, Gogeta, Vegeto, Trunks, Broly, Black Goku — tous avec modèles 3D.
+  - **Naruto (10) :** Naruto, Sasuke, Kakashi, Sakura, Itachi, Gaara, Shikamaru, Jiraiya, Tsunade, Madara — Madara, Itachi et Sasuke avec modèles 3D.
+  - **One Piece (9) :** Luffy, Zoro, Sanji, Nami, Robin, Chopper, Franky, Brook, Jinbe — Luffy, Zoro, Sanji et Franky avec modèles 3D.
 - **Recrutement :** Modal en 2 étapes — choix du personnage puis configuration (provider, role, room cible, system prompt).
 - **Rôles libres :** Champ texte avec suggestions (CEO, CTO, CFO, DevOps, etc.) au lieu d'un enum fixe.
 - **System Prompt :** Chaque agent a son propre prompt système détaillé pour le LLM.

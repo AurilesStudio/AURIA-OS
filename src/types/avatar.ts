@@ -77,9 +77,9 @@ export interface CharacterTeam {
 }
 
 export const CHARACTER_TEAMS: CharacterTeam[] = [
-  { id: "dragon-ball", name: "Dragon Ball", color: "#ff8c00", icon: "🐉" },
-  { id: "naruto",      name: "Naruto",      color: "#ff6b35", icon: "🍥" },
-  { id: "one-piece",   name: "One Piece",   color: "#e63946", icon: "🏴‍☠️" },
+  { id: "dragon-ball", name: "Dragon Ball", color: "#ff8c00", icon: "" },
+  { id: "naruto",      name: "Naruto",      color: "#ff6b35", icon: "" },
+  { id: "one-piece",   name: "One Piece",   color: "#e63946", icon: "" },
 ];
 
 // ── Character Catalog ────────────────────────────────────────
@@ -107,15 +107,15 @@ export const CHARACTER_CATALOG: CharacterEntry[] = [
 
   // ── Naruto ──
   { id: "naruto",    name: "Naruto",    modelUrl: "", color: "#ff9a3c", teamId: "naruto" },
-  { id: "sasuke",    name: "Sasuke",    modelUrl: "", color: "#3c4eff", teamId: "naruto" },
+  { id: "sasuke",    name: "Sasuke",    modelUrl: "/models/sasuke.glb", color: "#3c4eff", teamId: "naruto", rotationY: -Math.PI / 2 },
   { id: "kakashi",   name: "Kakashi",   modelUrl: "", color: "#8e99a4", teamId: "naruto" },
   { id: "sakura",    name: "Sakura",    modelUrl: "", color: "#ff69b4", teamId: "naruto" },
-  { id: "itachi",    name: "Itachi",    modelUrl: "", color: "#c0392b", teamId: "naruto" },
+  { id: "itachi",    name: "Itachi",    modelUrl: "/models/itachi.glb", color: "#c0392b", teamId: "naruto", rotationY: -Math.PI / 2 },
   { id: "gaara",     name: "Gaara",     modelUrl: "", color: "#d35400", teamId: "naruto" },
   { id: "shikamaru", name: "Shikamaru", modelUrl: "", color: "#5d6d7e", teamId: "naruto" },
   { id: "jiraiya",   name: "Jiraiya",   modelUrl: "", color: "#e74c3c", teamId: "naruto" },
   { id: "tsunade",   name: "Tsunade",   modelUrl: "", color: "#f1c40f", teamId: "naruto" },
-  { id: "madara",    name: "Madara",    modelUrl: "", color: "#6b21a8", teamId: "naruto" },
+  { id: "madara",    name: "Madara",    modelUrl: "/models/Madara.glb", color: "#6b21a8", teamId: "naruto", rotationY: -Math.PI / 2 },
 
   // ── One Piece ──
   { id: "luffy",   name: "Luffy",   modelUrl: "/models/luffy.glb", color: "#e63946", teamId: "one-piece", rotationY: -Math.PI / 2 },
@@ -124,7 +124,7 @@ export const CHARACTER_CATALOG: CharacterEntry[] = [
   { id: "nami",    name: "Nami",    modelUrl: "", color: "#ff8c42", teamId: "one-piece" },
   { id: "robin",   name: "Robin",   modelUrl: "", color: "#8e44ad", teamId: "one-piece" },
   { id: "chopper", name: "Chopper", modelUrl: "", color: "#ff69b4", teamId: "one-piece" },
-  { id: "franky",  name: "Franky",  modelUrl: "", color: "#3498db", teamId: "one-piece" },
+  { id: "franky",  name: "Franky",  modelUrl: "/models/franky.glb", color: "#3498db", teamId: "one-piece", rotationY: -Math.PI / 2 },
   { id: "brook",   name: "Brook",   modelUrl: "", color: "#bdc3c7", teamId: "one-piece" },
   { id: "jinbe",   name: "Jinbe",   modelUrl: "", color: "#2980b9", teamId: "one-piece" },
 ];
