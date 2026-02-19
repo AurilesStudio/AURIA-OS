@@ -31,7 +31,8 @@ export function AvatarInfoPanel() {
   const availableClipNames = useStore((s) => s.availableClipNames);
   const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
   const roles = useStore((s) => s.roles);
-  const setCameraTarget = useStore((s) => s.setCameraTarget);
+  const focusedAvatarId = useStore((s) => s.focusedAvatarId);
+  const setFocusedAvatarId = useStore((s) => s.setFocusedAvatarId);
 
   const [tab, setTab] = useState<Tab>("settings");
   const [name, setName] = useState("");
@@ -106,14 +107,15 @@ export function AvatarInfoPanel() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
-                    const [ax, , az] = selectedAvatar.position;
-                    setCameraTarget({
-                      position: [ax + 5, 4, az + 5] as [number, number, number],
-                      target: [ax, 0, az] as [number, number, number],
-                    });
+                    const isTracking = focusedAvatarId === selectedAvatar.id;
+                    setFocusedAvatarId(isTracking ? null : selectedAvatar.id);
                   }}
-                  title="Focus camera"
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-white/10 hover:text-text-primary"
+                  title={focusedAvatarId === selectedAvatar.id ? "Stop tracking" : "Track camera"}
+                  className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                    focusedAvatarId === selectedAvatar.id
+                      ? "text-text-primary bg-white/10"
+                      : "text-text-muted hover:bg-white/10 hover:text-text-primary"
+                  }`}
                 >
                   <Focus className="h-3.5 w-3.5" />
                 </button>

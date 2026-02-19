@@ -46,14 +46,24 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 - **Barre de progression :** Barre visuelle dans le panneau de settings de l'agent, colorée selon la couleur de l'agent.
 - **Persistance :** Le level est sauvegardé et restauré au refresh.
 
-### 4.5. Caméra Libre & Presets de Vues
+### 4.5. AURIA — Superviseur Global
+AURIA est l'orchestrateur du système. Ce n'est pas un avatar classique :
+- **Non sélectionnable / non draggable :** Cliquer sur AURIA ne fait rien (pas de panneau info, pas de drag).
+- **Non recruitable :** AURIA n'apparaît pas dans le modal de recrutement ni dans les onglets de teams.
+- **Toujours présent :** Spawné automatiquement au démarrage dans l'état initial du store (id fixe `avatar-auria`). Filtré à la restauration du localStorage pour garantir unicité.
+- **Patrol cross-room :** AURIA se déplace librement entre toutes les rooms de tous les projets (Walking permanent). Son `roomId`/`projectId` restent vides — il n'appartient à aucune room.
+- **Actions store :** `spawnAuria()` (avec dédup), `removeAuria()`, `selectAvatar()` bloque la sélection si `characterId === "auria"`.
+
+### 4.6. Caméra Libre, Presets & Tracking Temps Réel
 - **Contrôles caméra :** MapControls avec rotation activée — clic gauche = pan, clic droit = rotation, scroll = zoom. Le passage sous le sol est bloqué (maxPolarAngle).
 - **Presets de vue :** Toolbar flottante en bas à droite avec 4 presets (Isometric, Top-Down, Front, Side). Chaque preset est calculé dynamiquement par rapport au centre du projet actif.
-- **Focus avatar :** Deux accès — bouton Focus dans la toolbar (picker listant tous les avatars déployés) et bouton Focus dans le header du panneau info avatar (focus direct sur l'avatar sélectionné).
-- **Transitions animées :** CameraAnimator avec interpolation exponentielle frame-rate independent (ease-out smooth, speed=3). L'utilisateur peut interrompre une animation à tout moment en touchant la caméra.
+- **Focus avatar :** Deux accès — bouton Focus dans la toolbar (picker listant tous les avatars déployés) et bouton Focus dans le header du panneau info avatar.
+- **Tracking temps réel :** Le focus avatar est un toggle qui active un suivi continu de la caméra. La caméra suit l'avatar frame par frame via `avatarWorldPositions` (Map globale mise à jour chaque frame dans le `useFrame` de chaque avatar). Le tracking s'arrête automatiquement quand l'utilisateur touche les contrôles caméra (orbit), ou par re-clic sur le bouton Focus.
+- **Positions monde :** Les avatars opèrent en coordonnées monde (le `groupRef` Three.js est positionné directement en world-space). La position est synchronisée vers le store toutes les 250ms pendant le walk, et immédiatement quand le walk s'arrête, garantissant la cohérence entre la position visuelle 3D et les données du store.
+- **Transitions animées :** CameraAnimator avec interpolation exponentielle frame-rate independent (ease-out smooth, speed=3). L'utilisateur peut interrompre une animation/tracking à tout moment en touchant la caméra.
 - **Sécurité drag :** Listener window-level `pointerup` pour garantir que les contrôles caméra se réactivent même si le pointeur sort de la zone de drag.
 
-### 4.6. Intégration LLM Multi-Provider
+### 4.7. Intégration LLM Multi-Provider
 - **Providers supportés :** Claude (Anthropic), Gemini (Google), Mistral, Local (Ollama).
 - **Clés API globales :** Configuration centralisée dans le panneau Settings (persisté en localStorage).
 - **Ollama :** Endpoint et modèle configurables (défaut: `localhost:11434`, `mistral`).
@@ -61,18 +71,18 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 - **Exécution :** Chaque avatar envoie ses tâches au provider LLM configuré. Le coût en tokens est trackable par provider.
 - **Pricing :** Calcul automatique du coût par requête (input/output tokens) selon le provider.
 
-### 4.7. Système de Rôles
+### 4.8. Système de Rôles
 - **Rôles prédéfinis :** CEO, CTO, CFO, COO, CMO, CPO, Lead Dev, DevOps, Designer, Data Analyst, QA, Support, Legal, HR, Growth.
 - **Rôles personnalisés :** Création libre avec nom, description, couleur et system prompt.
 - **Panneau de gestion :** Interface dédiée pour créer, éditer et supprimer des rôles.
 - **Assignation :** Chaque avatar est lié à un rôle qui définit son comportement via le system prompt.
 
-### 4.8. Settings & Configuration
+### 4.9. Settings & Configuration
 - **Panneau Settings :** Accessible depuis la sidebar, regroupe les clés API (Claude, Gemini, Mistral), la configuration Ollama et la clé Tripo3D.
 - **Token Gauges :** Suivi en temps réel de la consommation par provider avec coût cumulé.
 - **Reset tracking :** Possibilité de remettre les compteurs à zéro.
 
-### 4.9. Intégration Écosystème
+### 4.10. Intégration Écosystème
 - **Linear Sync :** Affichage des tickets urgents.
 - **Notion Bridge :** Exportation du contexte en cas de saturation de tokens.
 - **GitHub Monitor :** Statut des PRs et déploiements.
@@ -102,7 +112,7 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 8. ~~Team templates (sauvegarde/déploiement d'équipes entre projets).~~
 9. ~~Trading Room immersive (3 sub-rooms, agents dédiés, UI trading mock, props 3D).~~
 
-### 4.10. Trading Room (Projet Trading)
+### 4.11. Trading Room (Projet Trading)
 Le projet "Trading" (project-2) dispose d'un layout immersif spécialisé, distinct du layout standard 9 rooms.
 
 #### Architecture

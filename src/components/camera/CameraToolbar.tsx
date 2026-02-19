@@ -33,7 +33,8 @@ function useProjectCenter(): { cx: number; cz: number } {
 
 function AvatarFocusPicker({ onClose }: { onClose: () => void }) {
   const avatars = useStore((s) => s.avatars);
-  const setCameraTarget = useStore((s) => s.setCameraTarget);
+  const focusedAvatarId = useStore((s) => s.focusedAvatarId);
+  const setFocusedAvatarId = useStore((s) => s.setFocusedAvatarId);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,20 +59,24 @@ function AvatarFocusPicker({ onClose }: { onClose: () => void }) {
         <button
           key={a.id}
           onClick={() => {
-            const [ax, , az] = a.position;
-            setCameraTarget({
-              position: [ax + 5, 4, az + 5],
-              target: [ax, 0, az],
-            });
+            const isTracking = focusedAvatarId === a.id;
+            setFocusedAvatarId(isTracking ? null : a.id);
             onClose();
           }}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-text-muted transition-colors hover:bg-white/10 hover:text-text-primary"
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
+            focusedAvatarId === a.id
+              ? "bg-white/10 text-text-primary"
+              : "text-text-muted hover:bg-white/10 hover:text-text-primary"
+          }`}
         >
           <span
             className="h-2 w-2 shrink-0 rounded-full"
             style={{ backgroundColor: a.color }}
           />
           {a.name}
+          {focusedAvatarId === a.id && (
+            <span className="ml-auto text-[9px] uppercase opacity-50">tracking</span>
+          )}
         </button>
       ))}
     </div>

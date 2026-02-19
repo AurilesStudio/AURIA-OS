@@ -10,6 +10,7 @@ import type { AvatarData } from "@/types";
 import { ROOM_SIZE, TRADING_ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
+import { avatarWorldPositions } from "@/lib/avatarPositions";
 import { AvatarGlow } from "./AvatarGlow";
 import { AvatarLabel } from "./AvatarLabel";
 import {
@@ -26,6 +27,7 @@ const ANIM_URLS = ["/animations/happy-idle.fbx", "/animations/walking.fbx"];
 const ANIM_NAMES = ["Happy Idle", "Walking"];
 const WALK_SPEED = 1.2;
 const PATROL_MARGIN = 1.5;
+const CROSS_ROOM_PAUSE = 1.5; // seconds AURIA pauses in each room before moving on
 
 interface AvatarModelProps {
   avatar: AvatarData;
@@ -273,9 +275,11 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const rooms = useStore((s) => s.rooms);
   const roles = useStore((s) => s.roles);
   const workspaceProjects = useStore((s) => s.workspaceProjects);
+  const updateAvatarPosition = useStore((s) => s.updateAvatarPosition);
 
   const isSelected = selectedAvatarId === avatar.id;
   const isWalking = avatar.activeClip === "Walking";
+  const isAuria = avatar.characterId === "auria";
 
   useAvatarAction(avatar.id);
 
@@ -283,16 +287,61 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const project = workspaceProjects.find((p) => p.id === avatar.projectId);
   const roomSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
 
+  // ── Position synchronization ─────────────────────────────────
+  // groupRef operates in world coordinates (outer group has no position offset).
+  // When not walking, store position drives groupRef. When walking, useFrame drives.
+  const isWalkingRef = useRef(isWalking);
+  isWalkingRef.current = isWalking;
+  const prevWalkingRef = useRef(isWalking);
+
+  // Initialize position on mount
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(avatar.position[0], avatar.position[1], avatar.position[2]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync store position → groupRef when not walking (handles drag, room change, etc.)
+  useEffect(() => {
+    if (groupRef.current && !isWalkingRef.current) {
+      groupRef.current.position.set(avatar.position[0], avatar.position[1], avatar.position[2]);
+    }
+  }, [avatar.position[0], avatar.position[1], avatar.position[2]]);
+
+  // When walking stops, sync visual position → store so drag/focus stay accurate
+  useEffect(() => {
+    if (prevWalkingRef.current && !isWalking && groupRef.current) {
+      const p = groupRef.current.position;
+      updateAvatarPosition(avatar.id, [p.x, p.y, p.z]);
+    }
+    prevWalkingRef.current = isWalking;
+  }, [isWalking, avatar.id, updateAvatarPosition]);
+
+  // Clean up position cache on unmount
+  useEffect(() => {
+    return () => { avatarWorldPositions.delete(avatar.id); };
+  }, [avatar.id]);
+
+  // Throttled store sync timer — keeps store position accurate for camera focus
+  const syncTimer = useRef(0);
+  const SYNC_INTERVAL = 0.25; // seconds
+
   // Patrol state
   const patrol = useRef({
     targetX: 0,
     targetZ: 0,
     needsNewTarget: true,
+    // AURIA cross-room patrol
+    pauseTimer: 0,
+    isPausing: false,
   });
 
   // Reset patrol when clip changes
   useEffect(() => {
     patrol.current.needsNewTarget = true;
+    patrol.current.isPausing = false;
+    patrol.current.pauseTimer = 0;
   }, [avatar.activeClip]);
 
   // Get room bounds for patrol
@@ -307,11 +356,82 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     patrol.current.needsNewTarget = false;
   };
 
-  // Locomotion when walking
+  // AURIA: pick a random room from ALL rooms and set a visual target inside it
+  // AURIA doesn't belong to any room — roomId/projectId stay empty
+  const lastCrossRoomIdx = useRef(-1);
+  const pickCrossRoomTarget = () => {
+    if (rooms.length === 0) return;
+    // Pick a room different from the last one visited
+    const candidates = rooms.length > 1
+      ? rooms.filter((_, i) => i !== lastCrossRoomIdx.current)
+      : rooms;
+    const idx = Math.floor(Math.random() * candidates.length);
+    const targetRoom = candidates[idx]!;
+    lastCrossRoomIdx.current = rooms.indexOf(targetRoom);
+    const targetProject = workspaceProjects.find((p) => p.id === targetRoom.projectId);
+    const rSize = targetProject?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+    const halfW = rSize.width / 2 - PATROL_MARGIN;
+    const halfD = rSize.depth / 2 - PATROL_MARGIN;
+    patrol.current.targetX = targetRoom.position[0] + (Math.random() - 0.5) * 2 * halfW;
+    patrol.current.targetZ = targetRoom.position[2] + (Math.random() - 0.5) * 2 * halfD;
+    patrol.current.needsNewTarget = false;
+    patrol.current.isPausing = false;
+  };
+
+  // Locomotion + position tracking
   useFrame((_, delta) => {
-    if (!groupRef.current || !isWalking || !room) return;
+    if (!groupRef.current) return;
+
+    // Always update world position cache (frame-accurate, for camera focus)
+    const gp = groupRef.current.position;
+    avatarWorldPositions.set(avatar.id, [gp.x, gp.y, gp.z]);
+
+    if (!isWalking) return;
+
+    // Throttled sync of visual position → store (so all UI reads accurate pos)
+    syncTimer.current += delta;
+    if (syncTimer.current >= SYNC_INTERVAL) {
+      syncTimer.current = 0;
+      updateAvatarPosition(avatar.id, [gp.x, gp.y, gp.z]);
+    }
 
     const p = patrol.current;
+
+    // AURIA cross-room patrol
+    if (isAuria) {
+      // Handle pause between rooms
+      if (p.isPausing) {
+        p.pauseTimer -= delta;
+        if (p.pauseTimer <= 0) {
+          pickCrossRoomTarget();
+        }
+        return;
+      }
+
+      if (p.needsNewTarget) pickCrossRoomTarget();
+
+      const pos = groupRef.current.position;
+      const dx = p.targetX - pos.x;
+      const dz = p.targetZ - pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist < 0.15) {
+        // Arrived — pause before choosing next room
+        p.isPausing = true;
+        p.pauseTimer = CROSS_ROOM_PAUSE;
+        return;
+      }
+
+      const step = Math.min(WALK_SPEED * delta, dist);
+      pos.x += (dx / dist) * step;
+      pos.z += (dz / dist) * step;
+      groupRef.current.rotation.y = Math.atan2(dx, dz);
+      return;
+    }
+
+    // Normal intra-room patrol for other avatars
+    if (!room) return;
+
     if (p.needsNewTarget) pickNewTarget();
 
     const pos = groupRef.current.position;
@@ -346,7 +466,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const baseRotationY = charEntry?.rotationY ?? 0;
 
   return (
-    <group position={avatar.position}>
+    <group>
       <group ref={groupRef} onPointerDown={handlePointerDown}>
         {avatar.modelUrl ? (
           <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} baseRotationY={baseRotationY} />
@@ -355,9 +475,8 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
         )}
 
         <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={roles.find((r) => r.id === avatar.roleId)?.name} level={avatar.level} />
+        <AvatarGlow visible={isSelected} status={avatar.status} />
       </group>
-
-      <AvatarGlow visible={isSelected} status={avatar.status} />
     </group>
   );
 }

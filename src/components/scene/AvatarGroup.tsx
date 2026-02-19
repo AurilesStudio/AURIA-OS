@@ -18,7 +18,7 @@ export function AvatarGroup() {
         <AvatarModel
           key={avatar.id}
           avatar={avatar}
-          onDragStart={handlePointerDown}
+          onDragStart={avatar.characterId === "auria" ? undefined : handlePointerDown}
         />
       ))}
 

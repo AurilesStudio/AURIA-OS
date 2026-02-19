@@ -153,6 +153,27 @@ function buildDefaultRooms(projectId: string): RoomData[] {
 
 const defaultRooms: RoomData[] = defaultProjects.flatMap((p) => buildDefaultRooms(p.id));
 
+// ── AURIA supervisor avatar (always present) ─────────────────
+const auriaChar = CHARACTER_CATALOG.find((c) => c.id === "auria")!;
+const AURIA_AVATAR_ID = "avatar-auria";
+const initialAuriaAvatar: AvatarData = {
+  id: AURIA_AVATAR_ID,
+  name: "AURIA",
+  roleId: "role-auria-overseer",
+  provider: "auria",
+  color: auriaChar.color,
+  modelUrl: auriaChar.modelUrl,
+  activeClip: "Walking",
+  status: "idle",
+  currentAction: null,
+  history: [],
+  position: [0, 0, 0],
+  roomId: "",
+  projectId: "",
+  characterId: "auria",
+  level: 0,
+};
+
 // ── Helpers ──────────────────────────────────────────────────
 /** Compute the next free grid position for a new room within a project zone */
 function nextRoomPosition(
@@ -277,6 +298,8 @@ interface AuriaStore {
   avatars: AvatarData[];
   selectedAvatarId: string | null;
   selectAvatar: (id: string | null) => void;
+  spawnAuria: () => void;
+  removeAuria: () => void;
   addAvatar: (opts: {
     characterId: string;
     provider: LLMProvider;
@@ -301,6 +324,8 @@ interface AuriaStore {
   // Camera presets
   cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
   setCameraTarget: (preset: { position: [number, number, number]; target: [number, number, number] } | null) => void;
+  focusedAvatarId: string | null;
+  setFocusedAvatarId: (id: string | null) => void;
 
   // Team Templates
   teamTemplates: TeamTemplate[];
@@ -663,10 +688,33 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     })),
 
   // ── Avatar slice ──────────────────────────────────────────
-  avatars: [],
+  avatars: [initialAuriaAvatar],
   selectedAvatarId: null,
 
-  selectAvatar: (id) => set({ selectedAvatarId: id }),
+  selectAvatar: (id) =>
+    set((state) => {
+      // Block selection of AURIA
+      if (id !== null) {
+        const target = state.avatars.find((a) => a.id === id);
+        if (target?.characterId === "auria") return state;
+      }
+      return { selectedAvatarId: id };
+    }),
+
+  spawnAuria: () =>
+    set((state) => {
+      // Don't spawn if already exists
+      if (state.avatars.some((a) => a.characterId === "auria")) return state;
+      return { avatars: [...state.avatars, initialAuriaAvatar] };
+    }),
+
+  removeAuria: () =>
+    set((state) => ({
+      avatars: state.avatars.filter((a) => a.characterId !== "auria"),
+      selectedAvatarId: state.selectedAvatarId && state.avatars.find((a) => a.id === state.selectedAvatarId)?.characterId === "auria"
+        ? null
+        : state.selectedAvatarId,
+    })),
 
   addAvatar: (opts) =>
     set((state) => {
@@ -849,6 +897,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   // ── Camera presets ──────────────────────────────────────────
   cameraTarget: null,
   setCameraTarget: (preset) => set({ cameraTarget: preset }),
+  focusedAvatarId: null,
+  setFocusedAvatarId: (id) => set({ focusedAvatarId: id, cameraTarget: null }),
 
   // ── Team Templates ────────────────────────────────────────
   teamTemplates: [],
@@ -1089,37 +1139,42 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const catalogModelUrls = new Map(CHARACTER_CATALOG.map((c) => [c.id, c.modelUrl]));
 
     // Restore saved avatars (empty array = user deleted them all, respect that)
-    const avatars: AvatarData[] = saved.avatars.map((s) => {
-      const base = defaultMap.get(s.id);
-      // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
-      const catalogUrl = s.characterId ? catalogModelUrls.get(s.characterId) : undefined;
-      const modelUrl = catalogUrl ?? (s.modelUrl || base?.modelUrl || "");
+    // Filter out any persisted AURIA avatars — we always inject a fresh one
+    const restoredAvatars: AvatarData[] = saved.avatars
+      .filter((s) => s.characterId !== "auria")
+      .map((s) => {
+        const base = defaultMap.get(s.id);
+        // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
+        const catalogUrl = s.characterId ? catalogModelUrls.get(s.characterId) : undefined;
+        const modelUrl = catalogUrl ?? (s.modelUrl || base?.modelUrl || "");
 
-      // Migration: if legacy `role` (string) exists but no `roleId`, match by name
-      let roleId = s.roleId ?? "";
-      if (!roleId && s.role) {
-        const matched = roles.find((r) => r.name === s.role);
-        roleId = matched?.id ?? "";
-      }
+        // Migration: if legacy `role` (string) exists but no `roleId`, match by name
+        let roleId = s.roleId ?? "";
+        if (!roleId && s.role) {
+          const matched = roles.find((r) => r.name === s.role);
+          roleId = matched?.id ?? "";
+        }
 
-      return {
-        id: s.id,
-        name: s.name,
-        roleId,
-        provider: s.provider,
-        color: s.color,
-        modelUrl,
-        activeClip: s.activeClip || "Happy Idle",
-        status: "idle" as const,
-        currentAction: null,
-        history: [],
-        position: s.position,
-        roomId: s.roomId,
-        projectId: s.projectId ?? "project-1",
-        characterId: s.characterId ?? "",
-        level: s.level ?? 0,
-      };
-    });
+        return {
+          id: s.id,
+          name: s.name,
+          roleId,
+          provider: s.provider,
+          color: s.color,
+          modelUrl,
+          activeClip: s.activeClip || "Happy Idle",
+          status: "idle" as const,
+          currentAction: null,
+          history: [],
+          position: s.position,
+          roomId: s.roomId,
+          projectId: s.projectId ?? "project-1",
+          characterId: s.characterId ?? "",
+          level: s.level ?? 0,
+        };
+      });
+    // Always ensure AURIA is present
+    const avatars: AvatarData[] = [initialAuriaAvatar, ...restoredAvatars];
 
     return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch };
   },

@@ -25,6 +25,7 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
   { id: "role-market-watcher", name: "Market Surveillance", skillIds: [],                              systemPrompt: "Surveille les flux marché en temps réel." },
   { id: "role-risk-analyst",   name: "Risk Analysis",       skillIds: [],                              systemPrompt: "Évalue le ratio risque/rendement de chaque opportunité." },
   { id: "role-executor",       name: "Order Execution",     skillIds: [],                              systemPrompt: "Exécute les ordres validés sur le marché." },
+  { id: "role-auria-overseer", name: "AURIA Overseer",      skillIds: ["security", "testing"],          systemPrompt: "Tu es AURIA, l'intelligence superviseure du système. Tu vérifies en permanence que chaque agent remplit correctement sa mission, tu audites la qualité du travail produit et tu assures la sécurité globale de l'infrastructure." },
 ];
 
 export interface AvatarAction {
@@ -94,6 +95,9 @@ export interface CharacterEntry {
 }
 
 export const CHARACTER_CATALOG: CharacterEntry[] = [
+  // ── AURIA ──
+  { id: "auria", name: "AURIA", modelUrl: "/models/AURIA.glb", color: "#00ffcc", teamId: "auria", rotationY: -Math.PI / 2 },
+
   // ── Dragon Ball ──
   { id: "goku",       name: "Goku",       modelUrl: "/models/goku.glb",       color: "#ff3c3c", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
   { id: "vegeta",     name: "Vegeta",     modelUrl: "/models/vegeta.glb",     color: "#3c5eff", teamId: "dragon-ball", rotationY: -Math.PI / 2 },
