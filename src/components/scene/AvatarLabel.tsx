@@ -7,10 +7,11 @@ interface AvatarLabelProps {
   status: AvatarStatus;
   role?: string;
   level?: number;
+  availability?: "available" | "unavailable";
 }
 
 /** Simple floating name label above the avatar (red/coral text like reference) */
-export function AvatarLabel({ name, color, status, role, level }: AvatarLabelProps) {
+export function AvatarLabel({ name, color, status, role, level, availability }: AvatarLabelProps) {
   return (
     <Html position={[0, 1.7, 0]} center distanceFactor={8} zIndexRange={[10, 0]}>
       <div
@@ -43,6 +44,15 @@ export function AvatarLabel({ name, color, status, role, level }: AvatarLabelPro
           >
             {role}
           </div>
+        )}
+        {availability && (
+          <div
+            className="mx-auto mt-0.5 h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: availability === "available" ? "#44ff44" : "#ff6b35",
+              boxShadow: `0 0 4px ${availability === "available" ? "#44ff44" : "#ff6b35"}`,
+            }}
+          />
         )}
       </div>
     </Html>

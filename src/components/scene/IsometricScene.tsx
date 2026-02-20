@@ -3,28 +3,32 @@ import { Canvas } from "@react-three/fiber";
 import { MapControls } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import { SceneLighting } from "./SceneLighting";
-import { IsometricRooms } from "./IsometricGrid";
 import { AvatarGroup } from "./AvatarGroup";
 import { SceneParticles } from "./SceneParticles";
 import { SceneProps } from "./SceneProps";
 import { TradingSceneProps } from "./TradingSceneProps";
+import { ProjectManagementSceneProps } from "./ProjectManagementSceneProps";
+import { ArenaSceneProps } from "./ArenaSceneProps";
 import { CameraAnimator } from "./CameraAnimator";
+import { GridOverlay } from "./GridOverlay";
+import { WorldEnvironment } from "./WorldEnvironment";
 
 export function IsometricScene() {
   const selectAvatar = useStore((s) => s.selectAvatar);
+  const fpvActive = useStore((s) => s.auriaFpvActive);
 
   const handlePointerMissed = () => {
     selectAvatar(null);
   };
 
   return (
-    <div className="fixed inset-0 z-0 scene-nebula">
+    <div className="fixed inset-0 z-0 scene-nebula" style={{ background: "#0a0515" }}>
       <Canvas
         camera={{
           fov: 38,
           position: [14, 12, 14],
           near: 0.1,
-          far: 200,
+          far: 300,
         }}
         onPointerMissed={handlePointerMissed}
         gl={{ antialias: true, alpha: true }}
@@ -39,6 +43,7 @@ export function IsometricScene() {
         */}
         <MapControls
           makeDefault
+          enabled={!fpvActive}
           enableRotate
           enableDamping
           dampingFactor={0.15}
@@ -48,11 +53,14 @@ export function IsometricScene() {
           maxPolarAngle={Math.PI / 2}
         />
         <CameraAnimator />
+        <WorldEnvironment />
         <SceneLighting />
         <SceneParticles />
-        <IsometricRooms />
+        <GridOverlay />
         <SceneProps />
         <TradingSceneProps />
+        <ProjectManagementSceneProps />
+        <ArenaSceneProps />
         <Suspense fallback={null}>
           <AvatarGroup />
         </Suspense>

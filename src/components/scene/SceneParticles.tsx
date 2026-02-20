@@ -10,9 +10,9 @@ export function SceneParticles({ count = 80 }: { count?: number }) {
     const geo = new THREE.BufferGeometry();
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 40;
+      arr[i * 3] = (Math.random() - 0.5) * 120;
       arr[i * 3 + 1] = Math.random() * 12 + 1;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      arr[i * 3 + 2] = (Math.random() - 0.5) * 120;
     }
     geo.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
     return geo;

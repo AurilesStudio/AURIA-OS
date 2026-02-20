@@ -127,22 +127,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Nebula background — dark with subtle warm color hints */
+/* Nebula background — fallback solid (sky + fog now handled in 3D) */
 .scene-nebula {
-  background: radial-gradient(
-      ellipse at 25% 25%,
-      rgba(15, 35, 42, 0.6) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 75% 55%,
-      rgba(30, 12, 45, 0.5) 0%,
-      transparent 45%
-    ),
-    radial-gradient(
-      ellipse at 50% 85%,
-      rgba(40, 10, 25, 0.3) 0%,
-      transparent 40%
-    ),
-    #0a0515;
+  background: #0a0515;
 }

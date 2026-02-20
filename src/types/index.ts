@@ -79,6 +79,7 @@ export {
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
   TRADING_ROOM_SIZE,
+  ARENA_ROOM_SIZE,
   getAvatarSkills,
   getAvatarSystemPrompt,
 } from "./avatar";

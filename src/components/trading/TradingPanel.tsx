@@ -7,10 +7,13 @@ import { DecisionCard } from "./DecisionCard";
 export function TradingPanel() {
   const killSwitch = useStore((s) => s.tradingKillSwitch);
   const toggleKillSwitch = useStore((s) => s.toggleKillSwitch);
+  const opportunityAlertsEnabled = useStore((s) => s.opportunityAlertsEnabled);
   const { pairs, opportunities, systemHealth, validateOpportunity, rejectOpportunity } =
     useTradingData(killSwitch);
 
-  const pendingOpps = opportunities.filter((o) => o.status === "pending");
+  const pendingOpps = opportunityAlertsEnabled
+    ? opportunities.filter((o) => o.status === "pending")
+    : [];
 
   return (
     <div className="flex flex-col gap-3">

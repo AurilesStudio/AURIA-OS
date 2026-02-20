@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Box, ArrowDown, Focus, PanelTop, PanelLeft } from "lucide-react";
+import { Box, ArrowDown, Focus, PanelTop, PanelLeft, Eye } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import type { LucideIcon } from "lucide-react";
 
@@ -85,6 +85,8 @@ function AvatarFocusPicker({ onClose }: { onClose: () => void }) {
 
 export function CameraToolbar() {
   const setCameraTarget = useStore((s) => s.setCameraTarget);
+  const fpvActive = useStore((s) => s.auriaFpvActive);
+  const toggleFpv = useStore((s) => s.toggleAuriaFpv);
   const { cx, cz } = useProjectCenter();
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -133,6 +135,16 @@ export function CameraToolbar() {
 
       {/* Separator */}
       <div className="mx-0.5 w-px self-stretch bg-white/10" />
+
+      {/* FPV toggle */}
+      <button
+        onClick={toggleFpv}
+        title="AURIA FPV"
+        className="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
+        style={fpvActive ? { color: "#00ffcc", backgroundColor: "rgba(0,255,204,0.12)" } : undefined}
+      >
+        <Eye className={`h-4 w-4 ${fpvActive ? "" : "text-text-muted hover:text-text-primary"}`} />
+      </button>
 
       {/* Focus avatar button */}
       <button

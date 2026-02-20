@@ -7,10 +7,11 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import type { Group } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { AvatarData } from "@/types";
-import { ROOM_SIZE, TRADING_ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
+import { ROOM_SIZE, TRADING_ROOM_SIZE, ARENA_ROOM_SIZE, CHARACTER_CATALOG } from "@/types";
 import { useStore } from "@/store/useStore";
 import { useAvatarAction } from "@/hooks/useAvatarAction";
 import { avatarWorldPositions } from "@/lib/avatarPositions";
+import { auriaFpvDirection } from "@/lib/auriaFpvDirection";
 import { AvatarGlow } from "./AvatarGlow";
 import { AvatarLabel } from "./AvatarLabel";
 import {
@@ -23,9 +24,10 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────
 const TARGET_HEIGHT = 1.45;
-const ANIM_URLS = ["/animations/happy-idle.fbx", "/animations/walking.fbx"];
-const ANIM_NAMES = ["Happy Idle", "Walking"];
+const ANIM_URLS = ["/animations/happy-idle.fbx", "/animations/walking.fbx", "/animations/running.fbx"];
+const ANIM_NAMES = ["Happy Idle", "Walking", "Running"];
 const WALK_SPEED = 1.2;
+const FPV_SPEED = 9; // units/second when FPV controlled (running pace)
 const PATROL_MARGIN = 1.5;
 const CROSS_ROOM_PAUSE = 1.5; // seconds AURIA pauses in each room before moving on
 
@@ -277,6 +279,9 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const workspaceProjects = useStore((s) => s.workspaceProjects);
   const updateAvatarPosition = useStore((s) => s.updateAvatarPosition);
 
+  const fpvActive = useStore((s) => s.auriaFpvActive);
+  const setAvatarActiveClipStore = useStore((s) => s.setAvatarActiveClip);
+
   const isSelected = selectedAvatarId === avatar.id;
   const isWalking = avatar.activeClip === "Walking";
   const isAuria = avatar.characterId === "auria";
@@ -285,7 +290,9 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
 
   // Determine room size based on project layout type
   const project = workspaceProjects.find((p) => p.id === avatar.projectId);
-  const roomSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+  const roomSize = project?.layoutType === "arena" ? ARENA_ROOM_SIZE
+    : (project?.layoutType === "trading" || project?.layoutType === "project-management") ? TRADING_ROOM_SIZE
+    : ROOM_SIZE;
 
   // ── Position synchronization ─────────────────────────────────
   // groupRef operates in world coordinates (outer group has no position offset).
@@ -330,6 +337,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   // Patrol state
   const patrol = useRef({
     targetX: 0,
+    targetY: 0,
     targetZ: 0,
     needsNewTarget: true,
     // AURIA cross-room patrol
@@ -344,6 +352,25 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     patrol.current.pauseTimer = 0;
   }, [avatar.activeClip]);
 
+  // FPV activation / deactivation
+  const prevFpv = useRef(false);
+  useEffect(() => {
+    if (!isAuria) return;
+    if (!prevFpv.current && fpvActive) {
+      // Entering FPV — initialize camera yaw from AURIA's current rotation
+      if (groupRef.current) {
+        auriaFpvDirection.cameraYaw = groupRef.current.rotation.y;
+      }
+    }
+    if (prevFpv.current && !fpvActive) {
+      // Leaving FPV — resume patrol
+      patrol.current.needsNewTarget = true;
+      patrol.current.isPausing = false;
+      setAvatarActiveClipStore(avatar.id, "Walking");
+    }
+    prevFpv.current = fpvActive;
+  }, [fpvActive, isAuria, avatar.id, setAvatarActiveClipStore]);
+
   // Get room bounds for patrol
   const room = rooms.find((r) => r.id === avatar.roomId);
 
@@ -352,6 +379,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     const halfW = roomSize.width / 2 - PATROL_MARGIN;
     const halfD = roomSize.depth / 2 - PATROL_MARGIN;
     patrol.current.targetX = room.position[0] + (Math.random() - 0.5) * 2 * halfW;
+    patrol.current.targetY = room.floorY ?? 0;
     patrol.current.targetZ = room.position[2] + (Math.random() - 0.5) * 2 * halfD;
     patrol.current.needsNewTarget = false;
   };
@@ -369,10 +397,13 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     const targetRoom = candidates[idx]!;
     lastCrossRoomIdx.current = rooms.indexOf(targetRoom);
     const targetProject = workspaceProjects.find((p) => p.id === targetRoom.projectId);
-    const rSize = targetProject?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+    const rSize = targetProject?.layoutType === "arena" ? ARENA_ROOM_SIZE
+      : (targetProject?.layoutType === "trading" || targetProject?.layoutType === "project-management") ? TRADING_ROOM_SIZE
+      : ROOM_SIZE;
     const halfW = rSize.width / 2 - PATROL_MARGIN;
     const halfD = rSize.depth / 2 - PATROL_MARGIN;
     patrol.current.targetX = targetRoom.position[0] + (Math.random() - 0.5) * 2 * halfW;
+    patrol.current.targetY = targetRoom.floorY ?? 0;
     patrol.current.targetZ = targetRoom.position[2] + (Math.random() - 0.5) * 2 * halfD;
     patrol.current.needsNewTarget = false;
     patrol.current.isPausing = false;
@@ -385,6 +416,44 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     // Always update world position cache (frame-accurate, for camera focus)
     const gp = groupRef.current.position;
     avatarWorldPositions.set(avatar.id, [gp.x, gp.y, gp.z]);
+
+    // AURIA FPV: game-style movement relative to camera yaw
+    if (isAuria && fpvActive) {
+      // Throttled store sync
+      syncTimer.current += delta;
+      if (syncTimer.current >= SYNC_INTERVAL) {
+        syncTimer.current = 0;
+        updateAvatarPosition(avatar.id, [gp.x, gp.y, gp.z]);
+      }
+
+      const pos = groupRef.current.position;
+      const dir = auriaFpvDirection;
+      const yaw = dir.cameraYaw;
+
+      if (dir.anyMove) {
+        // Transform ZQSD into world-space using camera yaw
+        // Forward  = ( sin(yaw),  cos(yaw))
+        // Right    = (-cos(yaw),  sin(yaw))   ← cross(fwd, Y-up) in Three.js
+        const worldDx = dir.moveForward * Math.sin(yaw) - dir.moveRight * Math.cos(yaw);
+        const worldDz = dir.moveForward * Math.cos(yaw) + dir.moveRight * Math.sin(yaw);
+
+        const step = FPV_SPEED * delta;
+        pos.x += worldDx * step;
+        pos.z += worldDz * step;
+
+        if (avatar.activeClip !== "Running") {
+          setAvatarActiveClipStore(avatar.id, "Running");
+        }
+      } else {
+        if (avatar.activeClip !== "Happy Idle") {
+          setAvatarActiveClipStore(avatar.id, "Happy Idle");
+        }
+      }
+
+      // Model always faces camera direction
+      groupRef.current.rotation.y = yaw;
+      return;
+    }
 
     if (!isWalking) return;
 
@@ -399,6 +468,8 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
 
     // AURIA cross-room patrol
     if (isAuria) {
+
+      // ── Normal patrol (FPV off) ──
       // Handle pause between rooms
       if (p.isPausing) {
         p.pauseTimer -= delta;
@@ -424,6 +495,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
 
       const step = Math.min(WALK_SPEED * delta, dist);
       pos.x += (dx / dist) * step;
+      pos.y = p.targetY;
       pos.z += (dz / dist) * step;
       groupRef.current.rotation.y = Math.atan2(dx, dz);
       return;
@@ -446,6 +518,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
 
     const step = Math.min(WALK_SPEED * delta, dist);
     pos.x += (dx / dist) * step;
+    pos.y = p.targetY;
     pos.z += (dz / dist) * step;
 
     // Face movement direction
@@ -465,17 +538,28 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
   const charEntry = CHARACTER_CATALOG.find((c) => c.id === avatar.characterId);
   const baseRotationY = charEntry?.rotationY ?? 0;
 
+  // Hide AURIA model during FPV (camera is at eye level)
+  const hiddenInFpv = isAuria && fpvActive;
+
   return (
     <group>
       <group ref={groupRef} onPointerDown={handlePointerDown}>
-        {avatar.modelUrl ? (
-          <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} baseRotationY={baseRotationY} />
-        ) : (
-          <ProceduralAvatar color={outfit} skin={skin} ei={ei} />
+        {!hiddenInFpv && (
+          <>
+            {avatar.modelUrl ? (
+              <GltfAvatar url={avatar.modelUrl} avatarId={avatar.id} baseRotationY={baseRotationY} />
+            ) : (
+              <ProceduralAvatar color={outfit} skin={skin} ei={ei} />
+            )}
+          </>
         )}
 
-        <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={roles.find((r) => r.id === avatar.roleId)?.name} level={avatar.level} />
-        <AvatarGlow visible={isSelected} status={avatar.status} />
+        {!hiddenInFpv && (
+          <>
+            <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={roles.find((r) => r.id === avatar.roleId)?.name} level={avatar.level} availability={avatar.availability} />
+            <AvatarGlow visible={isSelected} status={avatar.status} />
+          </>
+        )}
       </group>
     </group>
   );

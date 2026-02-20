@@ -442,6 +442,11 @@ interface AuriaStore {
   removeTeamTemplate: (id: string) => void;
   deployTeamToProject: (templateId: string, projectId: string) => void;
   saveProjectTeamAsTemplate: (projectId: string, name: string) => void;
+
+  // AURIA FPV (not persisted)
+  auriaFpvActive: boolean;
+  setAuriaFpvActive: (active: boolean) => void;
+  toggleAuriaFpv: () => void;
 }
 
 export const useStore = create<AuriaStore>()(persist((set) => ({
@@ -705,14 +710,14 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       id: "appearance-goku",
       name: "Goku",
       thumbnailUrl: "",
-      modelUrl: "/models/goku.glb",
+      modelUrl: "/models/Dragon Ball/Goku.glb",
       createdAt: Date.now(),
     },
     {
       id: "appearance-vegeta",
       name: "Vegeta",
       thumbnailUrl: "",
-      modelUrl: "/models/vegeta.glb",
+      modelUrl: "/models/Dragon Ball/Vegeta.glb",
       createdAt: Date.now(),
     },
   ],
@@ -1223,6 +1228,19 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
       return { teamTemplates: [...state.teamTemplates, template] };
     }),
+
+  // ── AURIA FPV ──────────────────────────────────────────────
+  auriaFpvActive: false,
+  setAuriaFpvActive: (active) =>
+    set({
+      auriaFpvActive: active,
+      ...(active ? { cameraTarget: null, focusedAvatarId: null } : {}),
+    }),
+  toggleAuriaFpv: () =>
+    set((state) => ({
+      auriaFpvActive: !state.auriaFpvActive,
+      ...(!state.auriaFpvActive ? { cameraTarget: null, focusedAvatarId: null } : {}),
+    })),
 }), {
   name: "auria-store",
   partialize: (state) => ({

@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Cpu, Clock, ArrowRightLeft,
-  Trash2, Settings, Activity, Box, Play,
-  Zap, Wrench, FileText, Focus,
+  Trash2, Settings, Activity, Play,
+  Zap, Wrench, FileText, Focus, FolderOpen,
 } from "lucide-react";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useStore } from "@/store/useStore";
@@ -20,51 +20,32 @@ type Tab = "settings" | "activity";
 
 export function AvatarInfoPanel() {
   const { selectedAvatar, select } = useAvatar();
-  const activeProjectId = useStore((s) => s.activeProjectId);
   const rooms = useStore((s) => s.rooms);
-  const projectRooms = rooms.filter((r) => r.projectId === activeProjectId);
+  const workspaceProjects = useStore((s) => s.workspaceProjects);
+  const isAuria = selectedAvatar?.characterId === "auria";
   const moveAvatarToRoom = useStore((s) => s.moveAvatarToRoom);
   const updateAvatar = useStore((s) => s.updateAvatar);
   const removeAvatar = useStore((s) => s.removeAvatar);
-  const appearances = useStore((s) => s.appearances);
-  const setAvatarGenerationConsoleOpen = useStore((s) => s.setAvatarGenerationConsoleOpen);
   const availableClipNames = useStore((s) => s.availableClipNames);
   const setAvatarActiveClip = useStore((s) => s.setAvatarActiveClip);
   const roles = useStore((s) => s.roles);
   const focusedAvatarId = useStore((s) => s.focusedAvatarId);
   const setFocusedAvatarId = useStore((s) => s.setFocusedAvatarId);
+  const setAvatarAvailability = useStore((s) => s.setAvatarAvailability);
 
   const [tab, setTab] = useState<Tab>("settings");
-  const [name, setName] = useState("");
-  const [roleId, setRoleId] = useState("");
-  const [provider, setProvider] = useState<LLMProvider>("auria");
 
-  // Sync local form state when selected avatar changes
+  // Reset tab when avatar changes
   useEffect(() => {
-    if (selectedAvatar) {
-      setName(selectedAvatar.name);
-      setRoleId(selectedAvatar.roleId);
-      setProvider(selectedAvatar.provider);
-      setTab("settings");
-    }
+    if (selectedAvatar) setTab("settings");
   }, [selectedAvatar?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!selectedAvatar) return null;
 
-  const hasChanges =
-    name !== selectedAvatar.name ||
-    roleId !== selectedAvatar.roleId ||
-    provider !== selectedAvatar.provider;
-
-  const handleSave = () => {
-    updateAvatar(selectedAvatar.id, { name, roleId, provider });
-  };
-
-  const handleCancel = () => {
-    setName(selectedAvatar.name);
-    setRoleId(selectedAvatar.roleId);
-    setProvider(selectedAvatar.provider);
-  };
+  // Rooms filtered by the avatar's current project
+  const projectRooms = isAuria
+    ? rooms
+    : rooms.filter((r) => r.projectId === selectedAvatar.projectId);
 
   const inheritedSkills = getAvatarSkills(selectedAvatar, roles);
   const inheritedPrompt = getAvatarSystemPrompt(selectedAvatar, roles);
@@ -160,22 +141,26 @@ export function AvatarInfoPanel() {
             <div className="max-h-[calc(100vh-220px)] overflow-y-auto p-4">
               {tab === "settings" ? (
                 <div className="flex flex-col gap-3">
-                  {/* Name */}
+                  {/* Name — auto-save on blur */}
                   <label className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase text-text-muted">Name</span>
                     <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      defaultValue={selectedAvatar.name}
+                      key={`name-${selectedAvatar.id}`}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim();
+                        if (v && v !== selectedAvatar.name) updateAvatar(selectedAvatar.id, { name: v });
+                      }}
                       className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
                     />
                   </label>
 
-                  {/* Role (select from roles) */}
+                  {/* Role — auto-save on change */}
                   <label className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase text-text-muted">Role</span>
                     <select
-                      value={roleId}
-                      onChange={(e) => setRoleId(e.target.value)}
+                      value={selectedAvatar.roleId}
+                      onChange={(e) => updateAvatar(selectedAvatar.id, { roleId: e.target.value })}
                       className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
                     >
                       <option value="">— No role —</option>
@@ -185,15 +170,15 @@ export function AvatarInfoPanel() {
                     </select>
                   </label>
 
-                  {/* Provider */}
+                  {/* Provider — auto-save on change */}
                   <label className="flex flex-col gap-1">
                     <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
                       <Zap className="h-2.5 w-2.5" />
                       LLM Provider
                     </span>
                     <select
-                      value={provider}
-                      onChange={(e) => setProvider(e.target.value as LLMProvider)}
+                      value={selectedAvatar.provider}
+                      onChange={(e) => updateAvatar(selectedAvatar.id, { provider: e.target.value as LLMProvider })}
                       className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
                     >
                       {(Object.entries(AVATAR_PROVIDER_LABELS) as [LLMProvider, string][]).map(
@@ -206,13 +191,13 @@ export function AvatarInfoPanel() {
                     </select>
                   </label>
 
-                  {/* Inherited Skills (readonly) */}
-                  {inheritedSkills.length > 0 && (
-                    <div className="flex flex-col gap-1.5">
-                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                        <Wrench className="h-2.5 w-2.5" />
-                        Skills (from role)
-                      </span>
+                  {/* Skills (from role) — always visible */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <Wrench className="h-2.5 w-2.5" />
+                      Skills (from role)
+                    </span>
+                    {inheritedSkills.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {SKILLS.filter((s) => inheritedSkills.includes(s.id)).map((skill) => (
                           <span
@@ -234,24 +219,24 @@ export function AvatarInfoPanel() {
                           </span>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-[10px] text-text-muted italic">No skills — assign a role with skills</p>
+                    )}
+                  </div>
 
-                  {/* Inherited System Prompt (readonly) */}
-                  {inheritedPrompt && (
-                    <div className="flex flex-col gap-1">
-                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                        <FileText className="h-2.5 w-2.5" />
-                        System Prompt (from role)
-                      </span>
-                      <div className="rounded border border-white/5 bg-bg-base/30 px-2.5 py-1.5 text-xs text-text-muted">
-                        {inheritedPrompt}
-                      </div>
+                  {/* System Prompt (from role) — always visible */}
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                      <FileText className="h-2.5 w-2.5" />
+                      System Prompt (from role)
+                    </span>
+                    <div className="rounded border border-white/5 bg-bg-base/30 px-2.5 py-1.5 text-xs text-text-muted">
+                      {inheritedPrompt || <span className="italic">No system prompt — assign a role with a prompt</span>}
                     </div>
-                  )}
+                  </div>
 
-                  {/* Status + Level */}
-                  <div className="flex items-center gap-3">
+                  {/* Status + Level + Availability */}
+                  <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] uppercase text-text-muted">Status</span>
                       <span
@@ -279,6 +264,35 @@ export function AvatarInfoPanel() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Availability toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase text-text-muted">Availability</span>
+                    <button
+                      onClick={() =>
+                        setAvatarAvailability(
+                          selectedAvatar.id,
+                          selectedAvatar.availability === "available" ? "unavailable" : "available",
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase transition-colors"
+                      style={{
+                        backgroundColor: selectedAvatar.availability === "available" ? "#44ff4420" : "#ff6b3520",
+                        color: selectedAvatar.availability === "available" ? "#44ff44" : "#ff6b35",
+                        border: `1px solid ${selectedAvatar.availability === "available" ? "#44ff4440" : "#ff6b3540"}`,
+                      }}
+                    >
+                      <div
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{
+                          backgroundColor: selectedAvatar.availability === "available" ? "#44ff44" : "#ff6b35",
+                          boxShadow: `0 0 4px ${selectedAvatar.availability === "available" ? "#44ff44" : "#ff6b35"}`,
+                        }}
+                      />
+                      {selectedAvatar.availability === "available" ? "Available" : "Unavailable"}
+                    </button>
+                  </div>
+
                   {/* Level progress bar */}
                   <div className="flex flex-col gap-1">
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
@@ -291,73 +305,6 @@ export function AvatarInfoPanel() {
                         }}
                       />
                     </div>
-                  </div>
-
-                  {/* ── Appearance Picker ──────── */}
-                  <div className="flex flex-col gap-2 rounded border border-white/5 bg-bg-base/30 p-2">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
-                        <Box className="h-2.5 w-2.5" />
-                        Appearance
-                      </span>
-                      <button
-                        onClick={() => setAvatarGenerationConsoleOpen(true)}
-                        className="text-[10px] text-text-muted transition-colors hover:text-text-primary"
-                      >
-                        Open Studio
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {/* Default (procedural) option */}
-                      <button
-                        onClick={() => updateAvatar(selectedAvatar.id, { modelUrl: "" })}
-                        className={`flex flex-col items-center gap-1 rounded border px-1.5 py-2 text-center transition-colors ${
-                          !selectedAvatar.modelUrl
-                            ? "border-white/20 bg-white/5"
-                            : "border-white/5 hover:border-white/15"
-                        }`}
-                      >
-                        <div className="flex h-8 w-8 items-center justify-center">
-                          <Cpu className="h-4 w-4 text-text-muted" />
-                        </div>
-                        <span className="text-[9px] text-text-muted">Default</span>
-                      </button>
-
-                      {/* Library entries */}
-                      {appearances.map((app) => (
-                        <button
-                          key={app.id}
-                          onClick={() => updateAvatar(selectedAvatar.id, { modelUrl: app.modelUrl })}
-                          className={`flex flex-col items-center gap-1 rounded border px-1.5 py-2 text-center transition-colors ${
-                            selectedAvatar.modelUrl === app.modelUrl
-                              ? "border-white/20 bg-white/5"
-                              : "border-white/5 hover:border-white/15"
-                          }`}
-                        >
-                          {app.thumbnailUrl ? (
-                            <img
-                              src={app.thumbnailUrl}
-                              alt={app.name}
-                              className="h-8 w-8 rounded object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 items-center justify-center">
-                              <Box className="h-4 w-4 text-text-muted" />
-                            </div>
-                          )}
-                          <span className="text-[9px] text-text-muted truncate w-full">
-                            {app.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {appearances.length === 0 && (
-                      <p className="text-center text-[10px] text-text-muted">
-                        No appearances. Open Studio to generate.
-                      </p>
-                    )}
                   </div>
 
                   {/* Animation clips (only for GLB avatars) */}
@@ -404,6 +351,30 @@ export function AvatarInfoPanel() {
                     </div>
                   )}
 
+                  {/* Project — auto-save on change */}
+                  {!isAuria && (
+                    <label className="flex flex-col gap-1">
+                      <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
+                        <FolderOpen className="h-2.5 w-2.5" />
+                        Project
+                      </span>
+                      <select
+                        value={selectedAvatar.projectId}
+                        onChange={(e) => {
+                          const firstRoom = rooms.find((r) => r.projectId === e.target.value);
+                          if (firstRoom) moveAvatarToRoom(selectedAvatar.id, firstRoom.id);
+                        }}
+                        className="rounded border border-white/10 bg-bg-base/50 px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-white/20"
+                      >
+                        {workspaceProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
                   {/* Room */}
                   <label className="flex flex-col gap-1">
                     <span className="flex items-center gap-1 text-[10px] uppercase text-text-muted">
@@ -423,36 +394,18 @@ export function AvatarInfoPanel() {
                     </select>
                   </label>
 
-                  {/* Save / Cancel / Delete */}
-                  <div className="mt-1 flex items-center gap-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={!hasChanges}
-                      className="rounded px-3 py-1.5 text-[10px] font-bold uppercase transition-colors disabled:opacity-30"
-                      style={{
-                        backgroundColor: hasChanges ? selectedAvatar.color : `${selectedAvatar.color}40`,
-                        color: "#fff",
-                      }}
-                    >
-                      Save
-                    </button>
-                    {hasChanges && (
+                  {/* Delete */}
+                  {!isAuria && (
+                    <div className="mt-1 flex justify-end">
                       <button
-                        onClick={handleCancel}
-                        className="rounded border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase text-text-muted transition-colors hover:text-text-primary"
+                        onClick={handleDelete}
+                        className="flex items-center gap-1 rounded px-2 py-1.5 text-[10px] text-text-muted transition-colors hover:bg-neon-red/10 hover:text-neon-red"
                       >
-                        Cancel
+                        <Trash2 className="h-3 w-3" />
+                        Delete
                       </button>
-                    )}
-                    <div className="flex-1" />
-                    <button
-                      onClick={handleDelete}
-                      className="flex items-center gap-1 rounded px-2 py-1.5 text-[10px] text-text-muted transition-colors hover:bg-neon-red/10 hover:text-neon-red"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Delete
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* ── Activity tab ─────────────────────── */

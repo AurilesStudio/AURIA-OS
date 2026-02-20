@@ -23,7 +23,7 @@ export function TokenGaugesPanel() {
           <RotateCcw className="h-3 w-3" />
         </button>
       </div>
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-2 gap-3">
         {gauges.map((g, i) => (
           <TokenGauge key={g.provider} data={g} index={i} />
         ))}

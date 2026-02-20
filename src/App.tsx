@@ -9,6 +9,7 @@ import { AvatarGenerationConsole } from "@/components/scene/AvatarGenerationCons
 import { AuriaCommandPanel } from "@/components/scene/AuriaCommandPanel";
 import { SkillsAssignmentPanel } from "@/components/scene/SkillsAssignmentPanel";
 import { useStore } from "@/store/useStore";
+import { useAuriaFpvKeys } from "@/hooks/useAuriaFpvKeys";
 import { DecisionCardOverlay } from "@/components/trading/DecisionCardOverlay";
 import { ProjectSelector } from "@/components/scene/ProjectSelector";
 import { TeamManagerPanel } from "@/components/scene/TeamManagerPanel";
@@ -24,6 +25,9 @@ export default function App() {
   useEffect(() => {
     hydrateLocalGlbs();
   }, [hydrateLocalGlbs]);
+
+  // Global FPV keyboard listener
+  useAuriaFpvKeys();
 
   return (
     <>

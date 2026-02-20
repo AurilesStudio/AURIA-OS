@@ -27,8 +27,8 @@ Créer une interface de contrôle "Live" (Dashboard) pour AURIA, permettant à A
 ### 4.3. Système de Team (9 avatars par projet)
 - **Character Catalog :** Bibliothèque de personnages 3D répartis en 3 teams (Dragon Ball, Naruto, One Piece). Chaque personnage avec modèle GLB est directement utilisable comme avatar dans les rooms, découplé du provider LLM.
   - **Dragon Ball (9) :** Goku, Vegeta, Gohan, Piccolo, Gogeta, Vegeto, Trunks, Broly, Black Goku — tous avec modèles 3D.
-  - **Naruto (10) :** Naruto, Sasuke, Kakashi, Sakura, Itachi, Gaara, Shikamaru, Jiraiya, Tsunade, Madara — Madara, Itachi et Sasuke avec modèles 3D.
-  - **One Piece (9) :** Luffy, Zoro, Sanji, Nami, Robin, Chopper, Franky, Brook, Jinbe — Luffy, Zoro, Sanji et Franky avec modèles 3D.
+  - **Naruto (3) :** Sasuke, Itachi, Madara — tous avec modèles 3D. (Naruto, Kakashi, Sakura, Gaara, Shikamaru, Jiraiya, Tsunade à ajouter quand les GLB seront prêts.)
+  - **One Piece (10) :** Luffy, Zoro, Sanji, Nami, Robin, Chopper, Franky, Brook, Usopp, Jinbei — tous avec modèles 3D.
 - **Recrutement :** Modal en 2 étapes — choix du personnage puis configuration (provider, role, room cible, system prompt).
 - **Rôles libres :** Champ texte avec suggestions (CEO, CTO, CFO, DevOps, etc.) au lieu d'un enum fixe.
 - **System Prompt :** Chaque agent a son propre prompt système détaillé pour le LLM.
@@ -94,6 +94,8 @@ AURIA est l'orchestrateur du système. Ce n'est pas un avatar classique :
 - **Glass Morphism :** Panneaux overlay avec `backdrop-blur` et bordures semi-transparentes.
 - **Caméra Toolbar :** Boutons compacts avec icônes Lucide, séparateur visuel entre presets et focus avatar.
 - **Rooms :** Bordures neon subtiles (opacité réduite 0.12/0.04) pour un rendu épuré sans surcharge visuelle.
+- **World Environment :** Fond sombre (#0a0515), étoiles cosmiques (Stars drei), fog exponentiel estompant les zones lointaines, bordures fines par zone de projet.
+- **Arena :** Salle dédiée avec décor GLB (`Arena.glb`), layout `arena` (20×20).
 
 ## 6. Roadmap Phase 1 (MVP)
 1. ~~Setup Skeleton React + Tailwind.~~
@@ -111,6 +113,9 @@ AURIA est l'orchestrateur du système. Ce n'est pas un avatar classique :
 7. ~~Panneau settings centralisé (clés API, Ollama, Tripo3D).~~
 8. ~~Team templates (sauvegarde/déploiement d'équipes entre projets).~~
 9. ~~Trading Room immersive (3 sub-rooms, agents dédiés, UI trading mock, props 3D).~~
+10. ~~Arena (layout 20×20, décor GLB, agents Dragon Ball).~~
+11. ~~World Environment (étoiles, fog, bordures de zone).~~
+12. ~~Catalogue complet One Piece (10 personnages avec GLB) + Brook & Jinbei.~~
 
 ### 4.11. Trading Room (Projet Trading)
 Le projet "Trading" (project-2) dispose d'un layout immersif spécialisé, distinct du layout standard 9 rooms.

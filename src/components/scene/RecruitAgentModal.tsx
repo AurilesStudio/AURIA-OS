@@ -129,9 +129,7 @@ export function RecruitAgentModal({ open, onClose }: { open: boolean; onClose: (
   const [roomId, setRoomId] = useState("");
 
   const targetRooms = rooms.filter((r) => r.projectId === targetProjectId);
-  const deployedCharIds = new Set(
-    avatars.filter((a) => a.projectId === targetProjectId).map((a) => a.characterId),
-  );
+  const deployedCharIds = new Set(avatars.map((a) => a.characterId));
   const teamCharacters = CHARACTER_CATALOG.filter(
     (c) => c.teamId === selectedTeamId && !deployedCharIds.has(c.id),
   );
