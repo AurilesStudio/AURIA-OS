@@ -1379,10 +1379,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const catalogModelUrls = new Map(CHARACTER_CATALOG.map((c) => [c.id, c.modelUrl]));
 
     // Restore saved avatars (empty array = user deleted them all, respect that)
-    // Filter out persisted AURIA and default PM avatars — we always inject fresh ones
-    const defaultPmCharIds: Set<string> = new Set(PM_AVATAR_DEFS.map((d) => d.characterId));
     const restoredAvatars: AvatarData[] = saved.avatars
-      .filter((s) => s.characterId !== "auria" && !defaultPmCharIds.has(s.characterId ?? ""))
       .map((s) => {
         const base = defaultMap.get(s.id);
         // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
@@ -1415,8 +1412,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
           availability: s.availability ?? "available",
         };
       });
-    // Always ensure AURIA + PM avatars are present
-    const avatars: AvatarData[] = [initialAuriaAvatar, ...initialPmAvatars, ...restoredAvatars];
+    // Inject AURIA + PM avatars only if missing from saved data
+    const restoredIds = new Set(restoredAvatars.map((a) => a.id));
+    const systemAvatarDefaults = [initialAuriaAvatar, ...initialPmAvatars];
+    const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
+    const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
     return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
   },
@@ -1439,15 +1439,12 @@ if (isSupabaseEnabled()) {
       const remote = await loadFromSupabase();
 
       if (remote) {
-        // Overlay remote data, but always re-inject AURIA + PM avatars
+        // Overlay remote data, inject AURIA + PM avatars only if missing
         const remoteAvatars = remote.avatars ?? [];
-        const defaultPmCharIds = new Set(PM_AVATAR_DEFS.map((d) => d.characterId as string));
-        const userAvatars = remoteAvatars.filter(
-          (a) =>
-            a.characterId !== "auria" &&
-            !defaultPmCharIds.has(a.characterId),
-        );
-        const mergedAvatars = [initialAuriaAvatar, ...initialPmAvatars, ...userAvatars];
+        const remoteIds = new Set(remoteAvatars.map((a) => a.id));
+        const systemDefaults = [initialAuriaAvatar, ...initialPmAvatars];
+        const missingDefaults = systemDefaults.filter((d) => !remoteIds.has(d.id));
+        const mergedAvatars = [...remoteAvatars, ...missingDefaults];
 
         useStore.setState({
           ...remote,

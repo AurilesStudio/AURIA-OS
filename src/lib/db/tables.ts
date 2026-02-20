@@ -126,11 +126,9 @@ export interface AvatarRow {
   availability: string;
 }
 
-/** Avatars to exclude from persistence (re-created fresh at startup) */
-const EXCLUDED_CHARACTER_IDS = new Set(["auria", "github", "notion", "linear"]);
-
-export function shouldPersistAvatar(a: AvatarData): boolean {
-  return !EXCLUDED_CHARACTER_IDS.has(a.characterId);
+/** All avatars are now persisted (including AURIA and PM team) */
+export function shouldPersistAvatar(_a: AvatarData): boolean {
+  return true;
 }
 
 export function avatarToRow(a: AvatarData): AvatarRow {
