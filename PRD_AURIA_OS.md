@@ -157,6 +157,27 @@ Le projet "Trading" (project-2) dispose d'un layout immersif spécialisé, disti
 8. **Portfolio tracker :** Affichage du portefeuille global (positions ouvertes, P&L réalisé/non réalisé).
 9. **Risk management avancé :** Limites de drawdown, sizing automatique, corrélation inter-paires.
 
+### 4.12. Gestion de projets (Github, Notion, Linear)
+Le projet "Gestion de projets" (project-4) utilise un layout identique au Trading : 3 sub-rooms élargies en ligne horizontale (1×3), positionné en grille 2×2 (col=1, row=1).
+
+#### Architecture
+- **Layout dédié :** `layoutType: "project-management"` sur le projet, réutilisant `TRADING_ROOM_SIZE` (14×10) et `TRADING_ROOM_SPACING_X` (17).
+- **Position grille :** À côté de Prospectauri (col droite), sous Trading (row bas).
+
+#### 3 Sub-rooms
+| Room | ID | Couleur | Glyphe | Prop 3D |
+|------|----|---------|--------|---------|
+| Github | `room-github` | Bleu (#58a6ff) | GIT | Structure de branches — sphère centrale + 3 branches |
+| Notion | `room-notion` | Gris clair (#e0e0e0) | WIKI | Pile de 3 pages flottantes empilées |
+| Linear | `room-linear` | Indigo (#818cf8) | TASKS | 3 colonnes Kanban de cubes empilés (3-2-1) |
+
+### 4.13. Persistance & Stockage
+- **Store Zustand + persist :** Tout l'état applicatif (rooms, avatars, positions, rôles, projets, clés API, templates) est sérialisé en `localStorage` via `zustand/middleware/persist` (clé `"auria-store"`).
+- **Positions sauvegardées :** Les positions des rooms et avatars (déplacés via drag en Edit Mode) sont conservées au refresh. Le merge restaure fidèlement les positions sauvées et ne recalcule que celles des nouvelles rooms ajoutées par défaut.
+- **Merge intelligent :** Au chargement, les données sauvées sont fusionnées avec les défauts courants — les nouvelles rooms/rôles/projets par défaut sont ajoutés sans écraser les données existantes.
+- **IndexedDB :** Utilisé pour stocker les fichiers GLB locaux (avatars 3D générés). Hydratation automatique au démarrage (`hydrateLocalGlbs`).
+- **Pas de BDD serveur :** Pour un usage mono-utilisateur local, `localStorage` + `IndexedDB` est suffisant. Une migration vers Supabase est envisagée en Phase 3 pour le multi-device.
+
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.

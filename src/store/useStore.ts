@@ -21,6 +21,7 @@ import {
   ROOM_SPACING_X,
   ROOM_SPACING_Z,
   TRADING_ROOM_SIZE,
+  ARENA_ROOM_SIZE,
   CHARACTER_CATALOG,
   DEFAULT_ROLES,
 } from "@/types";
@@ -39,20 +40,39 @@ import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
 
 // ── Default projects ─────────────────────────────────────────
 const defaultProjects: Project[] = [
+  { id: "project-5", name: "Arena", layoutType: "arena" },
   { id: "project-1", name: "SAAS Projects" },
   { id: "project-2", name: "Trading", layoutType: "trading" },
   { id: "project-3", name: "Prospectauri" },
+  { id: "project-4", name: "Gestion de projets", layoutType: "project-management" },
 ];
 
-// Grid origin offset — pushes the room grid away from the camera
+// Grid origin offset — pushes the room grid away from the camera (multiples of 2 for grid alignment)
 const GRID_ORIGIN_X = 8;
-const GRID_ORIGIN_Z = 0.6;
+const GRID_ORIGIN_Z = 0;
 
-// Gap between project zones in Z
-const PROJECT_ZONE_GAP = 5;
+// Gap between project zones in Z (multiple of 2 for grid alignment)
+const PROJECT_ZONE_GAP = 6;
 
-// Trading room spacing (center-to-center, horizontal)
-const TRADING_ROOM_SPACING_X = 17;
+// Trading room spacing (center-to-center, horizontal, multiple of 2 for grid alignment)
+const TRADING_ROOM_SPACING_X = 18;
+
+/**
+ * Zone depth for a project based on its layout type.
+ * Standard (3×3 grid): 3 rows of rooms → zoneDepth = 3·SPACING_Z + gap
+ * Large (1×3 row): 1 row of large rooms → zoneDepth = roomDepth + interProjectGap
+ *
+ * The inter-project visual gap (8 units) is identical for both layouts.
+ */
+const INTER_PROJECT_GAP = PROJECT_ZONE_GAP + 3 * ROOM_SPACING_Z - 2 * ROOM_SPACING_Z - ROOM_SIZE.depth; // 8
+
+function getProjectZoneDepth(project: Project | undefined): number {
+  if (project?.layoutType === "arena") return ARENA_ROOM_SIZE.depth + INTER_PROJECT_GAP;
+  const isLarge = project?.layoutType === "trading" || project?.layoutType === "project-management";
+  return isLarge
+    ? TRADING_ROOM_SIZE.depth + INTER_PROJECT_GAP
+    : 3 * ROOM_SPACING_Z + PROJECT_ZONE_GAP;
+}
 
 /**
  * Compute the grid origin for a project.
@@ -60,28 +80,29 @@ const TRADING_ROOM_SPACING_X = 17;
  *   P1 (left)   P2 (right)
  *   P3 (left)   P4 (right)
  *
- * The visual gap between project frames is identical on both axes.
- * Z gap = zoneDepth − 2·ROOM_SPACING_Z − ROOM_SIZE.depth  (= 8)
- * X zoneWidth is set so the edge-to-edge gap equals the Z gap,
- * accounting for standard rooms on the left (half-width 5)
- * and trading rooms on the right (half-width 7).
+ * Z is computed per-column by summing zone depths of projects above,
+ * so single-row layouts (trading, PM) don't waste vertical space.
  */
 function getProjectGridOrigin(
   projectId: string,
   allProjects: Project[],
 ): { x: number; z: number } {
   const idx = allProjects.findIndex((p) => p.id === projectId);
-  const zGap = PROJECT_ZONE_GAP + 3 * ROOM_SPACING_Z - 2 * ROOM_SPACING_Z - ROOM_SIZE.depth;
-  // zoneWidth so that right-edge of col-0 + zGap = left-edge of col-1
-  const zoneWidth = 2 * ROOM_SPACING_X + ROOM_SIZE.width / 2 + TRADING_ROOM_SIZE.width / 2 + zGap;
-  const zoneDepth = 3 * ROOM_SPACING_Z + PROJECT_ZONE_GAP;
+  const zoneWidth = 2 * ROOM_SPACING_X + ROOM_SIZE.width / 2 + TRADING_ROOM_SIZE.width / 2 + INTER_PROJECT_GAP;
 
   const col = idx % 2;
   const row = Math.floor(idx / 2);
 
+  // Sum zone depths of projects above in the same column
+  let z = GRID_ORIGIN_Z;
+  for (let r = 0; r < row; r++) {
+    const aboveIdx = r * 2 + col;
+    z += getProjectZoneDepth(allProjects[aboveIdx]);
+  }
+
   return {
     x: GRID_ORIGIN_X + col * zoneWidth,
-    z: GRID_ORIGIN_Z + row * zoneDepth,
+    z,
   };
 }
 
@@ -108,13 +129,12 @@ const DEFAULT_ROOM_IDS: Record<string, string[]> = {
     "room-p3-dev", "room-p3-vps", "room-p3-comms",
     "room-p3-finance", "room-p3-analytics", "room-p3-ops",
   ],
+  "project-4": ["room-github", "room-notion", "room-linear"],
 };
 
 /** Generate 3 trading sub-rooms in a 1×3 horizontal layout */
 function buildTradingRooms(projectId: string): RoomData[] {
   const origin = getProjectGridOrigin(projectId, defaultProjects);
-  // Offset Z so the top edge of trading rooms aligns with the top edge of standard rooms
-  const topAlignZ = origin.z + (TRADING_ROOM_SIZE.depth - ROOM_SIZE.depth) / 2;
   const tradingRoomDefs = [
     { id: "room-oracle", label: "The Oracle", borderColor: "#00ffcc" },
     { id: "room-forge",  label: "The Strategy Forge", borderColor: "#f59e0b" },
@@ -123,17 +143,51 @@ function buildTradingRooms(projectId: string): RoomData[] {
   return tradingRoomDefs.map((def, i) => ({
     id: def.id,
     label: def.label,
-    position: [origin.x + i * TRADING_ROOM_SPACING_X, 0, topAlignZ] as [number, number, number],
+    position: [origin.x + i * TRADING_ROOM_SPACING_X, 0, origin.z] as [number, number, number],
     borderColor: def.borderColor,
     skillIds: [],
     projectId,
   }));
 }
 
+/** Generate 3 project-management sub-rooms in a 1×3 horizontal layout */
+function buildProjectManagementRooms(projectId: string): RoomData[] {
+  const origin = getProjectGridOrigin(projectId, defaultProjects);
+  const pmRoomDefs = [
+    { id: "room-github", label: "Github", borderColor: "#58a6ff" },
+    { id: "room-notion", label: "Notion", borderColor: "#e0e0e0" },
+    { id: "room-linear", label: "Linear", borderColor: "#818cf8" },
+  ];
+  return pmRoomDefs.map((def, i) => ({
+    id: def.id,
+    label: def.label,
+    position: [origin.x + i * TRADING_ROOM_SPACING_X, 0, origin.z] as [number, number, number],
+    borderColor: def.borderColor,
+    skillIds: [],
+    projectId,
+  }));
+}
+
+/** Generate a single arena room centred in its project zone */
+function buildArenaRoom(projectId: string): RoomData[] {
+  const origin = getProjectGridOrigin(projectId, defaultProjects);
+  return [{
+    id: "room-arena",
+    label: "Arena",
+    position: [origin.x + 10, 0, origin.z + 10] as [number, number, number],
+    borderColor: "#ff003c",
+    skillIds: [],
+    projectId,
+    floorY: 3,
+  }];
+}
+
 /** Generate 9 default rooms for a project at its grid origin */
 function buildDefaultRooms(projectId: string): RoomData[] {
   const project = defaultProjects.find((p) => p.id === projectId);
   if (project?.layoutType === "trading") return buildTradingRooms(projectId);
+  if (project?.layoutType === "project-management") return buildProjectManagementRooms(projectId);
+  if (project?.layoutType === "arena") return buildArenaRoom(projectId);
 
   const origin = getProjectGridOrigin(projectId, defaultProjects);
   const ids = DEFAULT_ROOM_IDS[projectId];
@@ -172,7 +226,38 @@ const initialAuriaAvatar: AvatarData = {
   projectId: "",
   characterId: "auria",
   level: 0,
+  availability: "available",
 };
+
+// ── Default PM avatars (placed in project-4 rooms at startup) ──
+const PM_AVATAR_DEFS = [
+  { id: "avatar-github", characterId: "github", roleId: "role-github-ops",   roomId: "room-github" },
+  { id: "avatar-notion", characterId: "notion", roleId: "role-notion-docs",  roomId: "room-notion" },
+  { id: "avatar-linear", characterId: "linear", roleId: "role-linear-tasks", roomId: "room-linear" },
+] as const;
+
+const initialPmAvatars: AvatarData[] = PM_AVATAR_DEFS.map((def) => {
+  const char = CHARACTER_CATALOG.find((c) => c.id === def.characterId)!;
+  const room = defaultRooms.find((r) => r.id === def.roomId)!;
+  return {
+    id: def.id,
+    name: char.name,
+    roleId: def.roleId,
+    provider: "claude" as LLMProvider,
+    color: char.color,
+    modelUrl: char.modelUrl,
+    activeClip: "Happy Idle",
+    status: "idle" as const,
+    currentAction: null,
+    history: [],
+    position: [room.position[0], room.floorY ?? 0, room.position[2]] as [number, number, number],
+    roomId: def.roomId,
+    projectId: "project-4",
+    characterId: def.characterId,
+    level: 0,
+    availability: "available",
+  };
+});
 
 // ── Helpers ──────────────────────────────────────────────────
 /** Compute the next free grid position for a new room within a project zone */
@@ -317,9 +402,30 @@ interface AuriaStore {
   moveAvatarToRoom: (avatarId: string, roomId: string) => void;
   updateAvatarPosition: (avatarId: string, position: [number, number, number]) => void;
 
+  // Availability
+  setAvatarAvailability: (avatarId: string, availability: "available" | "unavailable") => void;
+
+  // Arena fight
+  arenaFight: { fighter1Id: string; fighter2Id: string; previousRooms: Record<string, string> } | null;
+  startArenaFight: () => void;
+  endArenaFight: () => void;
+
+  // Edit mode (room dragging)
+  editMode: boolean;
+  setEditMode: (enabled: boolean) => void;
+
+  // Grid overlay
+  gridOverlayEnabled: boolean;
+  setGridOverlayEnabled: (enabled: boolean) => void;
+
+  // Room position update
+  updateRoomPosition: (roomId: string, position: [number, number, number]) => void;
+
   // Trading
   tradingKillSwitch: boolean;
   toggleKillSwitch: () => void;
+  opportunityAlertsEnabled: boolean;
+  setOpportunityAlertsEnabled: (enabled: boolean) => void;
 
   // Camera presets
   cameraTarget: { position: [number, number, number]; target: [number, number, number] } | null;
@@ -567,7 +673,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
             ? {
                 ...a,
                 roomId: fallback.id,
-                position: [fallback.position[0] + ox, 0, fallback.position[2] + oz],
+                position: [fallback.position[0] + ox, fallback.floorY ?? 0, fallback.position[2] + oz],
               }
             : a,
         ),
@@ -688,7 +794,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     })),
 
   // ── Avatar slice ──────────────────────────────────────────
-  avatars: [initialAuriaAvatar],
+  avatars: [initialAuriaAvatar, ...initialPmAvatars],
   selectedAvatarId: null,
 
   selectAvatar: (id) =>
@@ -731,7 +837,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       const room = state.rooms.find((r) => r.id === opts.roomId);
       if (!room) return state;
       const project = state.workspaceProjects.find((p) => p.id === room.projectId);
-      const rSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+      const rSize = project?.layoutType === "arena" ? ARENA_ROOM_SIZE
+        : (project?.layoutType === "trading" || project?.layoutType === "project-management") ? TRADING_ROOM_SIZE
+        : ROOM_SIZE;
       const ox = (Math.random() - 0.5) * (rSize.width * 0.4);
       const oz = (Math.random() - 0.5) * (rSize.depth * 0.4);
 
@@ -746,11 +854,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         status: "idle",
         currentAction: null,
         history: [],
-        position: [room.position[0] + ox, 0, room.position[2] + oz],
+        position: [room.position[0] + ox, room.floorY ?? 0, room.position[2] + oz],
         roomId: opts.roomId,
         projectId: room.projectId,
         characterId: opts.characterId,
         level: 0,
+        availability: "available",
       };
       return { avatars: [...state.avatars, avatar], selectedAvatarId: avatar.id };
     }),
@@ -868,12 +977,14 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       const room = state.rooms.find((r) => r.id === roomId);
       if (!room) return state;
       const project = state.workspaceProjects.find((p) => p.id === room.projectId);
-      const rSize = project?.layoutType === "trading" ? TRADING_ROOM_SIZE : ROOM_SIZE;
+      const rSize = project?.layoutType === "arena" ? ARENA_ROOM_SIZE
+        : (project?.layoutType === "trading" || project?.layoutType === "project-management") ? TRADING_ROOM_SIZE
+        : ROOM_SIZE;
       const ox = (Math.random() - 0.5) * (rSize.width * 0.4);
       const oz = (Math.random() - 0.5) * (rSize.depth * 0.4);
       const position: [number, number, number] = [
         room.position[0] + ox,
-        0,
+        room.floorY ?? 0,
         room.position[2] + oz,
       ];
       return {
@@ -890,9 +1001,113 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ),
     })),
 
+  // ── Availability ──────────────────────────────────────────────
+  setAvatarAvailability: (avatarId, availability) =>
+    set((state) => ({
+      avatars: state.avatars.map((a) =>
+        a.id === avatarId ? { ...a, availability } : a,
+      ),
+    })),
+
+  // ── Arena fight ──────────────────────────────────────────────
+  arenaFight: null,
+
+  startArenaFight: () =>
+    set((state) => {
+      if (state.arenaFight) return state; // fight already in progress
+      const eligible = state.avatars.filter(
+        (a) => a.availability === "available" && a.modelUrl && a.characterId !== "auria",
+      );
+      if (eligible.length < 2) return state;
+      // Pick 2 random distinct avatars
+      const shuffled = [...eligible].sort(() => Math.random() - 0.5);
+      const f1 = shuffled[0]!;
+      const f2 = shuffled[1]!;
+      const previousRooms: Record<string, string> = {
+        [f1.id]: f1.roomId,
+        [f2.id]: f2.roomId,
+      };
+      // Move both fighters to the arena room
+      const arenaRoom = state.rooms.find((r) => r.id === "room-arena");
+      if (!arenaRoom) return state;
+      const hw = ARENA_ROOM_SIZE.width / 2;
+      const avatars = state.avatars.map((a) => {
+        if (a.id === f1.id) {
+          return {
+            ...a,
+            roomId: "room-arena",
+            projectId: arenaRoom.projectId,
+            position: [arenaRoom.position[0] - hw * 0.3, arenaRoom.floorY ?? 0, arenaRoom.position[2]] as [number, number, number],
+          };
+        }
+        if (a.id === f2.id) {
+          return {
+            ...a,
+            roomId: "room-arena",
+            projectId: arenaRoom.projectId,
+            position: [arenaRoom.position[0] + hw * 0.3, arenaRoom.floorY ?? 0, arenaRoom.position[2]] as [number, number, number],
+          };
+        }
+        return a;
+      });
+      return {
+        avatars,
+        arenaFight: { fighter1Id: f1.id, fighter2Id: f2.id, previousRooms },
+      };
+    }),
+
+  endArenaFight: () =>
+    set((state) => {
+      if (!state.arenaFight) return state;
+      const { fighter1Id, fighter2Id, previousRooms } = state.arenaFight;
+      // Move fighters back to their original rooms
+      let avatars = [...state.avatars];
+      for (const fighterId of [fighter1Id, fighter2Id]) {
+        const origRoomId = previousRooms[fighterId];
+        if (!origRoomId) continue;
+        const origRoom = state.rooms.find((r) => r.id === origRoomId);
+        if (!origRoom) continue;
+        const project = state.workspaceProjects.find((p) => p.id === origRoom.projectId);
+        const rSize = project?.layoutType === "arena" ? ARENA_ROOM_SIZE
+          : (project?.layoutType === "trading" || project?.layoutType === "project-management") ? TRADING_ROOM_SIZE
+          : ROOM_SIZE;
+        const ox = (Math.random() - 0.5) * (rSize.width * 0.4);
+        const oz = (Math.random() - 0.5) * (rSize.depth * 0.4);
+        avatars = avatars.map((a) =>
+          a.id === fighterId
+            ? {
+                ...a,
+                roomId: origRoomId,
+                projectId: origRoom.projectId,
+                position: [origRoom.position[0] + ox, origRoom.floorY ?? 0, origRoom.position[2] + oz] as [number, number, number],
+              }
+            : a,
+        );
+      }
+      return { avatars, arenaFight: null };
+    }),
+
+  // ── Edit mode (room dragging) ────────────────────────────────
+  editMode: false,
+  setEditMode: (enabled) => set({ editMode: enabled }),
+
+  // ── Grid overlay ───────────────────────────────────────────
+  gridOverlayEnabled: false,
+  setGridOverlayEnabled: (enabled) => set({ gridOverlayEnabled: enabled }),
+
+  // ── Room position update ───────────────────────────────────
+  updateRoomPosition: (roomId, position) =>
+    set((state) => ({
+      rooms: state.rooms.map((r) =>
+        r.id === roomId ? { ...r, position } : r,
+      ),
+    })),
+
   // ── Trading ──────────────────────────────────────────────────
   tradingKillSwitch: false,
   toggleKillSwitch: () => set((state) => ({ tradingKillSwitch: !state.tradingKillSwitch })),
+  opportunityAlertsEnabled: true,
+  setOpportunityAlertsEnabled: (enabled) => set({ opportunityAlertsEnabled: enabled }),
 
   // ── Camera presets ──────────────────────────────────────────
   cameraTarget: null,
@@ -979,11 +1194,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
             status: "idle",
             currentAction: null,
             history: [],
-            position: [room.position[0] + ox, 0, room.position[2] + oz],
+            position: [room.position[0] + ox, room.floorY ?? 0, room.position[2] + oz],
             roomId: room.id,
             projectId,
             characterId: slot.characterId,
             level: 0,
+            availability: "available",
           });
         }
       }
@@ -1037,17 +1253,21 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       projectId: a.projectId,
       characterId: a.characterId,
       level: a.level,
+      availability: a.availability,
     })),
     workspaceProjects: state.workspaceProjects,
     activeProjectId: state.activeProjectId,
     teamTemplates: state.teamTemplates,
     tradingKillSwitch: state.tradingKillSwitch,
+    opportunityAlertsEnabled: state.opportunityAlertsEnabled,
+    gridOverlayEnabled: state.gridOverlayEnabled,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
       id: string; name: string; provider: LLMProvider;
       color: string; modelUrl?: string; activeClip?: string; roomId: string; position: [number, number, number];
       projectId?: string; characterId?: string; level?: number;
+      availability?: "available" | "unavailable";
       // New field
       roleId?: string;
       // Legacy fields (migration)
@@ -1067,6 +1287,8 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       activeProjectId?: string;
       teamTemplates?: TeamTemplate[];
       tradingKillSwitch?: boolean;
+      opportunityAlertsEnabled?: boolean;
+      gridOverlayEnabled?: boolean;
     } | undefined;
     if (!saved) return current;
 
@@ -1111,9 +1333,13 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ? [...savedAppearances, ...missingAppDefaults]
       : current.appearances;
 
-    // Merge rooms: restore saved rooms + append any new default rooms
+    // Merge rooms: restore saved rooms (with their saved positions) + append any new default rooms
     const savedRooms = saved.rooms && saved.rooms.length > 0
-      ? saved.rooms.map((r) => ({ ...r, skillIds: r.skillIds ?? [], projectId: r.projectId ?? "project-1" }))
+      ? saved.rooms.map((r) => ({
+          ...r,
+          skillIds: r.skillIds ?? [],
+          projectId: r.projectId ?? "project-1",
+        }))
       : [];
     const savedRoomIds = new Set(savedRooms.map((r) => r.id));
     const missingDefaults = current.rooms.filter((r) => !savedRoomIds.has(r.id));
@@ -1126,10 +1352,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
     // Merge trading state
     const tradingKillSwitch = saved.tradingKillSwitch ?? current.tradingKillSwitch;
+    const opportunityAlertsEnabled = saved.opportunityAlertsEnabled ?? current.opportunityAlertsEnabled;
+    const gridOverlayEnabled = saved.gridOverlayEnabled ?? current.gridOverlayEnabled;
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
     }
 
     // Build map of default avatars for merging
@@ -1139,9 +1367,10 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const catalogModelUrls = new Map(CHARACTER_CATALOG.map((c) => [c.id, c.modelUrl]));
 
     // Restore saved avatars (empty array = user deleted them all, respect that)
-    // Filter out any persisted AURIA avatars — we always inject a fresh one
+    // Filter out persisted AURIA and default PM avatars — we always inject fresh ones
+    const defaultPmCharIds: Set<string> = new Set(PM_AVATAR_DEFS.map((d) => d.characterId));
     const restoredAvatars: AvatarData[] = saved.avatars
-      .filter((s) => s.characterId !== "auria")
+      .filter((s) => s.characterId !== "auria" && !defaultPmCharIds.has(s.characterId ?? ""))
       .map((s) => {
         const base = defaultMap.get(s.id);
         // Migrate modelUrl: if avatar has a characterId, always use the catalog's current URL
@@ -1171,11 +1400,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
           projectId: s.projectId ?? "project-1",
           characterId: s.characterId ?? "",
           level: s.level ?? 0,
+          availability: s.availability ?? "available",
         };
       });
-    // Always ensure AURIA is present
-    const avatars: AvatarData[] = [initialAuriaAvatar, ...restoredAvatars];
+    // Always ensure AURIA + PM avatars are present
+    const avatars: AvatarData[] = [initialAuriaAvatar, ...initialPmAvatars, ...restoredAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
   },
 }));
