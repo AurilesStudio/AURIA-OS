@@ -37,6 +37,8 @@ const initialGauges: TokenGaugeData[] = [
   { provider: "local",   label: "Local (Ollama)",   used: 0, limit: 1_000_000, color: "#22d3ee", cost: 0 },
 ];
 import { loadGlbFile, deleteGlbFile, bufferToBlobUrl } from "@/lib/glbStore";
+import { isSupabaseEnabled } from "@/lib/db/supabase";
+import { loadFromSupabase, seedIfEmpty, startSyncEngine, flushSync } from "@/lib/db/sync";
 
 // ── Default projects ─────────────────────────────────────────
 const defaultProjects: Project[] = [
@@ -797,15 +799,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   avatars: [initialAuriaAvatar, ...initialPmAvatars],
   selectedAvatarId: null,
 
-  selectAvatar: (id) =>
-    set((state) => {
-      // Block selection of AURIA
-      if (id !== null) {
-        const target = state.avatars.find((a) => a.id === id);
-        if (target?.characterId === "auria") return state;
-      }
-      return { selectedAvatarId: id };
-    }),
+  selectAvatar: (id) => set({ selectedAvatarId: id }),
 
   spawnAuria: () =>
     set((state) => {
@@ -1106,7 +1100,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   // ── Trading ──────────────────────────────────────────────────
   tradingKillSwitch: false,
   toggleKillSwitch: () => set((state) => ({ tradingKillSwitch: !state.tradingKillSwitch })),
-  opportunityAlertsEnabled: true,
+  opportunityAlertsEnabled: false,
   setOpportunityAlertsEnabled: (enabled) => set({ opportunityAlertsEnabled: enabled }),
 
   // ── Camera presets ──────────────────────────────────────────
@@ -1409,3 +1403,82 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
   },
 }));
+
+// ── Supabase bootstrap ──────────────────────────────────────────
+// After localStorage hydration finishes, overlay with Supabase data
+// and start the sync engine. Runs only when env vars are present.
+
+if (isSupabaseEnabled()) {
+  const persistApi = (useStore as unknown as {
+    persist: {
+      hasHydrated: () => boolean;
+      onFinishHydration: (cb: () => void) => () => void;
+    };
+  }).persist;
+
+  async function bootstrapSupabase() {
+    try {
+      const remote = await loadFromSupabase();
+
+      if (remote) {
+        // Overlay remote data, but always re-inject AURIA + PM avatars
+        const remoteAvatars = remote.avatars ?? [];
+        const defaultPmCharIds = new Set(PM_AVATAR_DEFS.map((d) => d.characterId as string));
+        const userAvatars = remoteAvatars.filter(
+          (a) =>
+            a.characterId !== "auria" &&
+            !defaultPmCharIds.has(a.characterId),
+        );
+        const mergedAvatars = [initialAuriaAvatar, ...initialPmAvatars, ...userAvatars];
+
+        useStore.setState({
+          ...remote,
+          avatars: mergedAvatars,
+        });
+        console.info("[supabase] state overlayed from cloud");
+      } else {
+        // Tables are empty — seed them with current (localStorage-hydrated) state
+        const s = useStore.getState();
+        await seedIfEmpty({
+          workspaceProjects: s.workspaceProjects,
+          rooms: s.rooms,
+          roles: s.roles,
+          avatars: s.avatars,
+          gauges: s.gauges,
+          teamTemplates: s.teamTemplates,
+          appearances: s.appearances,
+          llmApiKeys: s.llmApiKeys,
+          localLlmEndpoint: s.localLlmEndpoint,
+          localLlmModel: s.localLlmModel,
+          tripoApiKey: s.tripoApiKey,
+          activeProjectId: s.activeProjectId,
+          tradingKillSwitch: s.tradingKillSwitch,
+          opportunityAlertsEnabled: s.opportunityAlertsEnabled,
+          gridOverlayEnabled: s.gridOverlayEnabled,
+        });
+      }
+    } catch (err) {
+      console.warn("[supabase] bootstrap failed:", err);
+    }
+
+    // Start sync engine regardless (will track future mutations)
+    startSyncEngine(
+      useStore.subscribe as unknown as (listener: (state: Record<string, unknown>, prev: Record<string, unknown>) => void) => () => void,
+      useStore.getState as unknown as () => Record<string, unknown>,
+    );
+  }
+
+  // Hydration may already be done (synchronous localStorage), so check both cases
+  if (persistApi.hasHydrated()) {
+    void bootstrapSupabase();
+  } else {
+    persistApi.onFinishHydration(() => {
+      void bootstrapSupabase();
+    });
+  }
+
+  // Flush pending writes on page unload
+  window.addEventListener("beforeunload", () => {
+    flushSync();
+  });
+}

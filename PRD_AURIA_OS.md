@@ -172,16 +172,22 @@ Le projet "Gestion de projets" (project-4) utilise un layout identique au Tradin
 | Linear | `room-linear` | Indigo (#818cf8) | TASKS | 3 colonnes Kanban de cubes empilés (3-2-1) |
 
 ### 4.13. Persistance & Stockage
-- **Store Zustand + persist :** Tout l'état applicatif (rooms, avatars, positions, rôles, projets, clés API, templates) est sérialisé en `localStorage` via `zustand/middleware/persist` (clé `"auria-store"`).
-- **Positions sauvegardées :** Les positions des rooms et avatars (déplacés via drag en Edit Mode) sont conservées au refresh. Le merge restaure fidèlement les positions sauvées et ne recalcule que celles des nouvelles rooms ajoutées par défaut.
+- **Architecture hybride :** `localStorage` (cache instantané) + **Supabase Cloud** (PostgreSQL) pour la persistance durable et le multi-device.
+- **Store Zustand + persist :** L'état applicatif est sérialisé en `localStorage` via `zustand/middleware/persist` (clé `"auria-store"`) pour une hydration instantanée au chargement.
+- **Supabase Cloud :** Les données sont synchronisées vers PostgreSQL via le SDK `@supabase/supabase-js`. 8 tables : `projects`, `rooms`, `roles`, `avatars`, `token_gauges`, `team_templates`, `appearances`, `user_settings`.
+- **Séquence de chargement :** localStorage hydrate instantanément → Supabase overlay ensuite (~sub-seconde). Au premier lancement (tables vides), les défauts sont seedés automatiquement.
+- **Sync bidirectionnelle :** Chaque mutation Zustand est détectée via `subscribe()` et upsertée en Supabase avec debounce à 2 niveaux : 2s pour les positions (drag), 500ms pour le reste. `beforeunload` flush les écritures pendantes.
+- **Graceful degradation :** Sans les variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, l'app fonctionne en localStorage-only (zéro régression).
+- **Avatars système exclus :** AURIA, Github, Notion et Linear ne sont jamais persistés en DB — recréés fresh à chaque chargement depuis le code.
+- **Champs runtime exclus :** `status`, `currentAction`, `history` ne sont pas persistés (état éphémère).
+- **Positions sauvegardées :** Les positions des rooms et avatars (déplacés via drag en Edit Mode) sont conservées au refresh, en localStorage et en Supabase.
 - **Merge intelligent :** Au chargement, les données sauvées sont fusionnées avec les défauts courants — les nouvelles rooms/rôles/projets par défaut sont ajoutés sans écraser les données existantes.
 - **IndexedDB :** Utilisé pour stocker les fichiers GLB locaux (avatars 3D générés). Hydratation automatique au démarrage (`hydrateLocalGlbs`).
-- **Pas de BDD serveur :** Pour un usage mono-utilisateur local, `localStorage` + `IndexedDB` est suffisant. Une migration vers Supabase est envisagée en Phase 3 pour le multi-device.
 
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
 3. Linear / Notion / GitHub sync temps réel.
-4. Persistance serveur (Supabase) en remplacement du localStorage.
+4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
