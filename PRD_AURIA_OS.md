@@ -183,7 +183,7 @@ Le projet "Gestion de projets" (project-4) utilise un layout identique au Tradin
 - **Séquence de chargement :** localStorage hydrate instantanément → Supabase overlay ensuite (~sub-seconde). Au premier lancement (tables vides), les défauts sont seedés automatiquement.
 - **Sync bidirectionnelle :** Chaque mutation Zustand est détectée via `subscribe()` et upsertée en Supabase avec debounce à 2 niveaux : 2s pour les positions (drag), 500ms pour le reste. `beforeunload` flush les écritures pendantes.
 - **Graceful degradation :** Sans les variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, l'app fonctionne en localStorage-only (zéro régression).
-- **Avatars système exclus :** AURIA, Github, Notion et Linear ne sont jamais persistés en DB — recréés fresh à chaque chargement depuis le code.
+- **Tous les avatars persistés :** AURIA, Github, Notion, Linear et tous les autres avatars sont persistés en DB. Leurs customisations (system prompt, level, provider, position) sont conservées. Ils ne sont injectés comme défauts que lors du premier lancement si absents de la DB.
 - **Champs runtime exclus :** `status`, `currentAction`, `history` ne sont pas persistés (état éphémère).
 - **Positions sauvegardées :** Les positions des rooms et avatars (déplacés via drag en Edit Mode) sont conservées au refresh, en localStorage et en Supabase.
 - **Merge intelligent :** Au chargement, les données sauvées sont fusionnées avec les défauts courants — les nouvelles rooms/rôles/projets par défaut sont ajoutés sans écraser les données existantes.
