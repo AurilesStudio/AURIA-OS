@@ -224,6 +224,25 @@ Apparaît quand edit mode est actif, avec les contrôles :
 - **localStorage + Supabase :** `gridCellSize`, `gridColumns`, `gridRows` sont persistés dans l'objet `Project` (table `projects` : `grid_cell_size`, `grid_columns`, `grid_rows`).
 - **Grid overlay & edit mode :** Persistés dans `user_settings`.
 
+### 4.15. Mission Control — Modules de gestion
+Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour piloter, monitorer et collaborer avec AURIA et ses sous-agents. Basé sur le PRD Notion "AURIA Mission Control", adapté à la stack existante (Vite + React + Supabase au lieu de NextJS + Convex).
+
+#### Modules prévus
+| Module | Description | Priorité |
+|--------|-------------|----------|
+| **Tasks Board** | Kanban partagé Auriles/AURIA, sync Linear, drag & drop | Haute |
+| **Calendar** | Calendrier des tâches planifiées, cron jobs, rappels | Haute |
+| **Content Pipeline** | Pipeline création de contenu RS (Idée → Publié) | Haute |
+| **Memory** | Visualisation navigable des mémoires d'AURIA | Moyenne |
+| **Team** | Organigramme, fiches agents, métriques de performance | Moyenne |
+| **Office** | Scène 3D existante (déjà implémentée) | ✅ Fait |
+
+#### Phase 0 — Setup
+- ~~Init projet~~ ✅ Projet Vite + React + Supabase existant (AURI-39)
+- Schema Supabase pour les nouveaux modules (AURI-40)
+- Authentification token gateway (AURI-41)
+- Layout principal + Navigation entre modules (AURI-42)
+
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
@@ -231,3 +250,4 @@ Apparaît quand edit mode est actif, avec les contrôles :
 4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
+7. Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team (voir §4.15).
