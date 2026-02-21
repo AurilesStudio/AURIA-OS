@@ -1,19 +1,68 @@
-import { Brain } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useStore } from "@/store/useStore";
+import { MemoryHeader } from "../memory/MemoryHeader";
+import { MemoryList } from "../memory/MemoryList";
+import { MemoryModal } from "../memory/MemoryModal";
+import type { MCMemory, MCMemoryCategory } from "@/types/mission-control";
 
 export function MCMemoryModule() {
-  const count = useStore((s) => s.mcMemories.length);
+  const memories = useStore((s) => s.mcMemories);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editMemory, setEditMemory] = useState<MCMemory | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<MCMemoryCategory | "">("");
+
+  const filtered = useMemo(() => {
+    let result = memories;
+
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          m.content.toLowerCase().includes(q) ||
+          m.source.toLowerCase().includes(q),
+      );
+    }
+
+    if (categoryFilter) {
+      result = result.filter((m) => m.category === categoryFilter);
+    }
+
+    // Sort newest first
+    return [...result].sort((a, b) => b.createdAt - a.createdAt);
+  }, [memories, search, categoryFilter]);
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4">
-      <Brain className="h-12 w-12 text-text-muted/30" />
-      <h2 className="text-lg font-semibold text-text-primary">Memory</h2>
-      <p className="text-sm text-text-muted">
-        {count > 0 ? `${count} memor${count > 1 ? "ies" : "y"}` : "No memories yet"}
-      </p>
-      <p className="max-w-sm text-center text-xs text-text-muted/60">
-        Store decisions, learnings, and context for your projects.
-      </p>
+    <div className="flex h-full flex-col">
+      <MemoryHeader
+        count={filtered.length}
+        search={search}
+        onSearchChange={setSearch}
+        categoryFilter={categoryFilter}
+        onCategoryFilter={setCategoryFilter}
+        onNewMemory={() => setCreateOpen(true)}
+      />
+
+      <MemoryList
+        memories={filtered}
+        onEdit={setEditMemory}
+      />
+
+      {/* Create modal */}
+      <MemoryModal
+        open={createOpen}
+        memory={null}
+        onClose={() => setCreateOpen(false)}
+      />
+
+      {/* Edit modal */}
+      <MemoryModal
+        open={editMemory !== null}
+        memory={editMemory}
+        onClose={() => setEditMemory(null)}
+      />
     </div>
   );
 }

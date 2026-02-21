@@ -290,11 +290,18 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Éditeur de contenu intégré~~ ✅ ContentModal AnimatePresence, champs titre/stage/plateforme/script (textarea mono avec compteur caractères par plateforme : X=280, Instagram=2200, LinkedIn=3000, etc.)/date planifiée, suppression avec confirmation inline (AURI-56)
 - ~~API actions pour AURIA~~ ✅ Service `contentActions.ts` avec `createContentAPI()` : CRUD validé (createContent, updateContent, moveStage, deleteContent), queries (listContent, getScheduled, getContent), validation des stages (AURI-59)
 
-## 8. Roadmap Phase 4+ (Prochaine)
+#### Phase 4 — Memory Module (AURI-60 → AURI-64) ✅ Complete
+- ~~Modèle de données MCMemory~~ ✅ Déjà implémenté dans Phase 0 : type `MCMemory` + CRUD store + sync Supabase `mc_memories` (AURI-60)
+- ~~Interface liste + documents formatés~~ ✅ MemoryList scrollable avec MemoryCard (badge catégorie coloré, titre, content preview line-clamp-2, source, date), tri newest-first (AURI-61)
+- ~~Recherche globale full-text~~ ✅ MemoryHeader avec barre de recherche temps réel (titre + content + source), filtres par catégorie (pills All/Decision/Learning/Context/Reference), compteur résultats, bouton "+ New Memory" (AURI-62)
+- ~~Modal création/édition~~ ✅ MemoryModal AnimatePresence, champs titre/catégorie/source/content (textarea mono 10 lignes), suppression avec confirmation inline
+- ~~API actions pour AURIA~~ ✅ Service `memoryActions.ts` avec `createMemoryAPI()` : CRUD validé (createMemory, updateMemory, deleteMemory), queries (listMemories, searchMemories, getRecent, getMemory), validation catégories (AURI-64)
+
+## 8. Roadmap Phase 5+ (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
 3. Linear / Notion / GitHub sync temps réel.
 4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
-7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline~~ ✅ — Memory, Team restent à implémenter (voir §4.15).
+7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory~~ ✅ — Team reste à implémenter (voir §4.15).
