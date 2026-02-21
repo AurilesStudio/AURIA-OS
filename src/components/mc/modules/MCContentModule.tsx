@@ -1,19 +1,35 @@
-import { FileText } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useStore } from "@/store/useStore";
+import { ContentBoardHeader } from "../content/ContentBoardHeader";
+import { ContentBoard } from "../content/ContentBoard";
+import { ContentModal } from "../content/ContentModal";
 
 export function MCContentModule() {
-  const count = useStore((s) => s.mcContentPipeline.length);
+  const items = useStore((s) => s.mcContentPipeline);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [platformFilter, setPlatformFilter] = useState("");
+
+  const filteredItems = useMemo(() => {
+    if (!platformFilter) return undefined; // undefined = show all (unfiltered)
+    return items.filter(
+      (item) => item.platform.toLowerCase() === platformFilter.toLowerCase(),
+    );
+  }, [items, platformFilter]);
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4">
-      <FileText className="h-12 w-12 text-text-muted/30" />
-      <h2 className="text-lg font-semibold text-text-primary">Content Pipeline</h2>
-      <p className="text-sm text-text-muted">
-        {count > 0 ? `${count} item${count > 1 ? "s" : ""}` : "No content yet"}
-      </p>
-      <p className="max-w-sm text-center text-xs text-text-muted/60">
-        Manage your content from idea to publication across all platforms.
-      </p>
+    <div className="flex h-full flex-col">
+      <ContentBoardHeader
+        onNewContent={() => setCreateOpen(true)}
+        platformFilter={platformFilter}
+        onPlatformFilter={setPlatformFilter}
+      />
+      <ContentBoard filteredItems={filteredItems} />
+
+      <ContentModal
+        open={createOpen}
+        item={null}
+        onClose={() => setCreateOpen(false)}
+      />
     </div>
   );
 }

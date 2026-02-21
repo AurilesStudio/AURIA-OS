@@ -280,11 +280,21 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Badges de statut d'exécution~~ ✅ EventBadge compact (dot type + titre tronqué + dot statut : vert completed, rouge cancelled, gris scheduled, amber in_progress) (AURI-52)
 - ~~API actions pour AURIA~~ ✅ Service `calendarActions.ts` avec `createCalendarAPI()` : CRUD validé (createEvent, updateEvent, markExecuted, deleteEvent), queries (listEvents, getUpcoming, getEvent), validation types/statuts (AURI-53)
 
-## 8. Roadmap Phase 3 (Prochaine)
+#### Phase 3 — Content Pipeline (AURI-54 → AURI-59) ✅ Complete
+- ~~Modèle de données MCContentItem~~ ✅ Déjà implémenté dans Phase 0 : type `MCContentItem` + CRUD store + sync Supabase `mc_content_pipeline` (AURI-54)
+- ~~Vue pipeline Kanban~~ ✅ ContentBoard 5 colonnes (Idea, Draft, Review, Scheduled, Published) avec `@hello-pangea/dnd`, ContentCard draggable, ContentColumn droppable, badge plateforme coloré (AURI-55)
+  - **ContentBoard :** DragDropContext + 5 colonnes + handleDragEnd → updateMCContentItem(stage)
+  - **ContentColumn :** Header (dot couleur + label + badge compteur) + liste de ContentCards
+  - **ContentCard :** Carte overlay-glass draggable (titre, script preview, badge plateforme, date planifiée)
+  - **ContentBoardHeader :** Compteur total + filtre par plateforme (pills All/X/Instagram/LinkedIn/TikTok/YouTube/Blog) + bouton "+ New Content" (mc-accent)
+- ~~Éditeur de contenu intégré~~ ✅ ContentModal AnimatePresence, champs titre/stage/plateforme/script (textarea mono avec compteur caractères par plateforme : X=280, Instagram=2200, LinkedIn=3000, etc.)/date planifiée, suppression avec confirmation inline (AURI-56)
+- ~~API actions pour AURIA~~ ✅ Service `contentActions.ts` avec `createContentAPI()` : CRUD validé (createContent, updateContent, moveStage, deleteContent), queries (listContent, getScheduled, getContent), validation des stages (AURI-59)
+
+## 8. Roadmap Phase 4+ (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
 3. Linear / Notion / GitHub sync temps réel.
 4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
-7. Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team (voir §4.15).
+7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline~~ ✅ — Memory, Team restent à implémenter (voir §4.15).
