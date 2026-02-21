@@ -271,6 +271,15 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - **Autres modules :** Panneau pleine largeur par-dessus la scène avec overlay dim (bg-base/70)
   - **CSS :** Variable `--color-mc-accent: #00ffff`, utilitaire `.glow-mc`
 
+#### Phase 2 — Calendar Module (AURI-49 → AURI-53) ✅ Complete
+- ~~Modèle de données MCCalendarEvent~~ ✅ Déjà implémenté dans Phase 0 : type `MCCalendarEvent` + CRUD store + sync Supabase `mc_calendar_events` (AURI-49)
+- ~~Vue mois avec grille et dots~~ ✅ MonthView grille CSS 7×6, dots colorés par type (task=cyan, meeting=indigo, deployment=amber, reminder=amber, milestone=emerald), max 3 visibles + overflow "+N", clic cellule → création, clic événement → édition (AURI-50)
+- ~~Vue semaine avec timeline~~ ✅ WeekView 7 colonnes jour, timeline 0h-23h avec blocs positionnés en absolu, bord gauche coloré par type, clic bloc → édition, clic zone vide → création (AURI-50)
+- ~~CalendarHeader~~ ✅ Navigation chevrons < > mois/semaine, toggle Month/Week (bg-white/10 actif), compteur événements, bouton "+ New Event" (mc-accent) (AURI-50)
+- ~~Modal création/édition événement~~ ✅ EventModal AnimatePresence, champs titre/type/start-end datetime-local/status/executionResult, suppression avec confirmation inline (AURI-51)
+- ~~Badges de statut d'exécution~~ ✅ EventBadge compact (dot type + titre tronqué + dot statut : vert completed, rouge cancelled, gris scheduled, amber in_progress) (AURI-52)
+- ~~API actions pour AURIA~~ ✅ Service `calendarActions.ts` avec `createCalendarAPI()` : CRUD validé (createEvent, updateEvent, markExecuted, deleteEvent), queries (listEvents, getUpcoming, getEvent), validation types/statuts (AURI-53)
+
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
