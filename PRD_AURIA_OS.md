@@ -247,7 +247,7 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - `mc_team_agents` : Agents MC avec role/responsibilities/taskHistory
 - Authentification token gateway (AURI-41)
 
-#### Phase 1 — Tasks Board (AURI-43 / AURI-44 / AURI-45 / AURI-46 / AURI-47)
+#### Phase 1 — Tasks Board (AURI-43 → AURI-48) ✅ Complete
 - ~~Modèle de données MCTask~~ ✅ Déjà implémenté dans Phase 0 : type `MCTask` + CRUD store + sync Supabase `mc_tasks` (AURI-43)
 - ~~Vue Kanban avec drag & drop~~ ✅ Board 5 colonnes (Backlog, To Do, In Progress, Done, Cancelled) avec `@hello-pangea/dnd`, TaskCard draggable, KanbanColumn droppable (AURI-44)
   - **KanbanBoard :** DragDropContext + 5 colonnes + handleDragEnd → updateMCTask(status)
@@ -259,6 +259,7 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Filtres et recherche~~ ✅ TaskFilters avec recherche full-text (titre/description/labels), filtres combinables par priorité/assignee/label, bouton reset, compteur de résultats (AURI-46)
 - ~~Import Linear (read-only)~~ ✅ Service `linearClient.ts` (GraphQL, mapping statuts/priorités), LinearImportModal avec sélection d'équipe, liste checkable, détection de doublons, import en batch (AURI-47)
   - Bouton "Import Linear" dans TaskBoardHeader (visible si `VITE_LINEAR_API_KEY` configuré)
+- ~~API actions pour AURIA~~ ✅ Service `taskActions.ts` avec `createTaskAPI()` : CRUD validé (createTask, updateTask, moveTask, deleteTask, assignTask), queries (listTasks, getTask), validation des statuts/priorités (AURI-48)
 
 - ~~Layout principal + Navigation entre modules~~ ✅ MCSidebar + MCHeader + MCLayout + 5 placeholders modules (AURI-42)
   - **MCSidebar :** Navigation principale (bord gauche, z-10), 6 modules (Office, Tasks, Content, Calendar, Memory, Team), collapsible 56px/200px, icônes Lucide, indicateur actif cyan, statut AURIA (online/offline)
