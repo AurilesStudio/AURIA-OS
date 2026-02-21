@@ -4,10 +4,12 @@ import { TaskBoardHeader } from "../tasks/TaskBoardHeader";
 import { TaskFilters, EMPTY_FILTERS, type TaskFilterState } from "../tasks/TaskFilters";
 import { KanbanBoard } from "../tasks/KanbanBoard";
 import { TaskModal } from "../tasks/TaskModal";
+import { LinearImportModal } from "../tasks/LinearImportModal";
 
 export function MCTasksModule() {
   const tasks = useStore((s) => s.mcTasks);
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
 
   const filteredTasks = useMemo(() => {
@@ -45,7 +47,10 @@ export function MCTasksModule() {
 
   return (
     <div className="flex h-full flex-col">
-      <TaskBoardHeader onNewTask={() => setCreateOpen(true)} />
+      <TaskBoardHeader
+        onNewTask={() => setCreateOpen(true)}
+        onImportLinear={() => setImportOpen(true)}
+      />
       <TaskFilters
         filters={filters}
         onChange={setFilters}
@@ -57,6 +62,10 @@ export function MCTasksModule() {
         open={createOpen}
         task={null}
         onClose={() => setCreateOpen(false)}
+      />
+      <LinearImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
       />
     </div>
   );
