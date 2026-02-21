@@ -356,6 +356,8 @@ function ProjectFrame({
   onProjectPointerDown?: (projectId: string, e: ThreeEvent<PointerEvent>) => void;
 }) {
   const setActiveProjectId = useStore((s) => s.setActiveProjectId);
+  const globalCellSize = useStore((s) => s.gridCellSize);
+  const cellSize = project.gridCellSize ?? globalCellSize;
   const frameOpacity = isActive ? 0.4 : 0.15;
   const roomHw = project.layoutType === "arena" ? ahw : (project.layoutType === "trading" || project.layoutType === "project-management") ? thw : hw;
   const roomHd = project.layoutType === "arena" ? ahd : (project.layoutType === "trading" || project.layoutType === "project-management") ? thd : hd;
@@ -370,8 +372,26 @@ function ProjectFrame({
       maxZ = Math.max(maxZ, r.position[2] + roomHd);
     }
     const pad = FRAME_PADDING;
-    const x0 = minX - pad, x1 = maxX + pad;
-    const z0 = minZ - pad, z1 = maxZ + pad;
+    let x0 = minX - pad, x1 = maxX + pad;
+    let z0 = minZ - pad, z1 = maxZ + pad;
+
+    if (editMode) {
+      // Snap minimum bounds to grid lines
+      x0 = Math.floor(x0 / cellSize) * cellSize;
+      x1 = Math.ceil(x1 / cellSize) * cellSize;
+      z0 = Math.floor(z0 / cellSize) * cellSize;
+      z1 = Math.ceil(z1 / cellSize) * cellSize;
+
+      // If explicit gridColumns/gridRows are set, keep x0/z0 anchor and extend
+      const { gridColumns, gridRows } = project;
+      if (gridColumns != null) {
+        x1 = x0 + gridColumns * cellSize;
+      }
+      if (gridRows != null) {
+        z1 = z0 + gridRows * cellSize;
+      }
+    }
+
     const y = 0.005;
     return {
       outline: [
@@ -380,8 +400,11 @@ function ProjectFrame({
       labelPos: [x0, 0.006, z0 - 0.35] as [number, number, number],
       center: [(x0 + x1) / 2, 0.001, (z0 + z1) / 2] as [number, number, number],
       size: [x1 - x0, z1 - z0] as [number, number],
+      // Expose auto-computed cell counts so the toolbar can show defaults
+      autoCols: Math.round((Math.ceil((maxX + pad) / cellSize) * cellSize - Math.floor((minX - pad) / cellSize) * cellSize) / cellSize),
+      autoRows: Math.round((Math.ceil((maxZ + pad) / cellSize) * cellSize - Math.floor((minZ - pad) / cellSize) * cellSize) / cellSize),
     };
-  }, [rooms, roomHw, roomHd]);
+  }, [rooms, roomHw, roomHd, editMode, cellSize, project]);
 
   if (!bounds) return null;
 

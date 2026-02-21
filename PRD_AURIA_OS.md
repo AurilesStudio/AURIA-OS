@@ -189,6 +189,41 @@ Le projet "Gestion de projets" (project-4) utilise un layout identique au Tradin
 - **Merge intelligent :** Au chargement, les données sauvées sont fusionnées avec les défauts courants — les nouvelles rooms/rôles/projets par défaut sont ajoutés sans écraser les données existantes.
 - **IndexedDB :** Utilisé pour stocker les fichiers GLB locaux (avatars 3D générés). Hydratation automatique au démarrage (`hydrateLocalGlbs`).
 
+### 4.14. Edit Mode & Grid System
+Le mode édition permet de réorganiser spatialement les rooms et projets sur la scène 3D avec un système de grille configurable par projet.
+
+#### Activation
+- **Toggle :** Settings → Scene → Edit Mode (amber indicator) ou via la floating toolbar "Done" pour quitter.
+- **Effet :** Active le drag des rooms individuelles et des projets entiers. Les bordures de rooms deviennent plus visibles (opacité augmentée).
+
+#### Grille & Snap
+- **Snap automatique :** En edit mode, toutes les positions se calent sur la grille. Pas de toggle séparé — le snap est intrinsèque à l'édition.
+- **Grid Overlay :** Grille visuelle Three.js (gridHelper) toggleable, s'adapte dynamiquement au `gridCellSize` du projet actif.
+- **Configuration par projet :** Chaque projet stocke ses propres paramètres de grille (`gridCellSize`, `gridColumns`, `gridRows`), indépendants des autres projets.
+
+#### Floating Toolbar (bottom-center)
+Apparaît quand edit mode est actif, avec les contrôles :
+- **Edit indicator :** Pastille amber pulsante + label "EDIT".
+- **Grid toggle :** Afficher/masquer l'overlay grille (purple highlight).
+- **Snap (cell size) :** Stepper +/- 0.5 (range 0.5–10) — taille des cellules du projet actif.
+- **W (colonnes) :** Stepper +/- 1 — nombre de cellules en largeur du cadre projet.
+- **H (rangées) :** Stepper +/- 1 — nombre de cellules en hauteur du cadre projet.
+- **Done :** Quitte le mode édition.
+
+#### Project Frame
+- **Bounds snappés :** En edit mode, les limites du cadre projet sont alignées sur les lignes de la grille.
+- **Taille explicite :** Quand `gridColumns`/`gridRows` sont définis, le cadre s'étend depuis son coin supérieur-gauche (ancre fixe). Chaque +1 = exactement 1 cellule supplémentaire.
+- **Minimum garanti :** La taille ne peut pas descendre en-dessous de l'espace nécessaire pour contenir toutes les rooms + padding.
+
+#### Drag
+- **Room drag :** Déplacement individuel avec snap au `gridCellSize` du projet parent. Les avatars de la room suivent.
+- **Project drag :** Via la barre de label du cadre projet. Déplace toutes les rooms et avatars du projet simultanément avec snap cohérent.
+- **Cell size locké au drag :** Le `gridCellSize` est capturé au `pointerDown` et reste constant pendant tout le drag (pas de changement mid-drag).
+
+#### Persistance
+- **localStorage + Supabase :** `gridCellSize`, `gridColumns`, `gridRows` sont persistés dans l'objet `Project` (table `projects` : `grid_cell_size`, `grid_columns`, `grid_rows`).
+- **Grid overlay & edit mode :** Persistés dans `user_settings`.
+
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.

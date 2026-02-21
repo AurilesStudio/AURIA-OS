@@ -4,7 +4,17 @@ import { useThree } from "@react-three/fiber";
 import { useStore } from "@/store/useStore";
 
 const CLICK_THRESHOLD = 0.15;
-const GRID_SNAP_SIZE = 2;
+const DEFAULT_CELL_SIZE = 2;
+
+/** Resolve the gridCellSize for a given project (falls back to global default). */
+function getCellSize(projectId: string | null): number {
+  const state = useStore.getState();
+  if (projectId) {
+    const project = state.workspaceProjects.find((p) => p.id === projectId);
+    if (project?.gridCellSize) return project.gridCellSize;
+  }
+  return state.gridCellSize ?? DEFAULT_CELL_SIZE;
+}
 
 export function useDragRoom() {
   const [isDraggingRoom, setIsDraggingRoom] = useState(false);
@@ -16,6 +26,8 @@ export function useDragRoom() {
   const dragStartPos = useRef<{ x: number; z: number } | null>(null);
   const roomOriginPos = useRef<[number, number, number] | null>(null);
   const hasDragged = useRef(false);
+  // Remember which project we're snapping to during the drag
+  const dragCellSize = useRef(DEFAULT_CELL_SIZE);
 
   // Snapshot of all room/avatar positions at project drag start
   const projectSnapshot = useRef<{
@@ -25,7 +37,6 @@ export function useDragRoom() {
 
   const updateRoomPosition = useStore((s) => s.updateRoomPosition);
   const updateAvatarPosition = useStore((s) => s.updateAvatarPosition);
-  const gridOverlayEnabled = useStore((s) => s.gridOverlayEnabled);
 
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
 
@@ -53,6 +64,9 @@ export function useDragRoom() {
 
       if (controls) controls.enabled = false;
 
+      // Lock cell size for the duration of this drag
+      dragCellSize.current = getCellSize(room.projectId);
+
       setDragRoomId(roomId);
       hasDragged.current = false;
       dragStartPos.current = { x: e.point.x, z: e.point.z };
@@ -64,6 +78,8 @@ export function useDragRoom() {
   const handleRoomPointerMove = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
       if (!dragStartPos.current) return;
+
+      const cellSize = dragCellSize.current;
 
       // ── Project drag ───────────────────────────────────────
       if (dragProjectId && projectSnapshot.current) {
@@ -80,12 +96,10 @@ export function useDragRoom() {
           // Apply snapped delta to ALL rooms/avatars from their snapshot positions
           let snapDx = dx;
           let snapDz = dz;
-          if (gridOverlayEnabled) {
-            const ref = projectSnapshot.current.rooms[0];
-            if (ref) {
-              snapDx = Math.round((ref.position[0] + dx) / GRID_SNAP_SIZE) * GRID_SNAP_SIZE - ref.position[0];
-              snapDz = Math.round((ref.position[2] + dz) / GRID_SNAP_SIZE) * GRID_SNAP_SIZE - ref.position[2];
-            }
+          const ref = projectSnapshot.current.rooms[0];
+          if (ref) {
+            snapDx = Math.round((ref.position[0] + dx) / cellSize) * cellSize - ref.position[0];
+            snapDz = Math.round((ref.position[2] + dz) / cellSize) * cellSize - ref.position[2];
           }
 
           for (const snap of projectSnapshot.current.rooms) {
@@ -122,11 +136,9 @@ export function useDragRoom() {
         let newX = roomOriginPos.current[0] + dx;
         let newZ = roomOriginPos.current[2] + dz;
 
-        // Snap to grid when grid overlay is active
-        if (gridOverlayEnabled) {
-          newX = Math.round(newX / GRID_SNAP_SIZE) * GRID_SNAP_SIZE;
-          newZ = Math.round(newZ / GRID_SNAP_SIZE) * GRID_SNAP_SIZE;
-        }
+        // Always snap to grid in edit mode
+        newX = Math.round(newX / cellSize) * cellSize;
+        newZ = Math.round(newZ / cellSize) * cellSize;
 
         const newRoomPos: [number, number, number] = [newX, roomOriginPos.current[1], newZ];
 
@@ -152,7 +164,7 @@ export function useDragRoom() {
         }
       }
     },
-    [dragRoomId, dragProjectId, updateRoomPosition, updateAvatarPosition, gridOverlayEnabled],
+    [dragRoomId, dragProjectId, updateRoomPosition, updateAvatarPosition],
   );
 
   const handleRoomPointerUp = useCallback(() => {
@@ -173,6 +185,9 @@ export function useDragRoom() {
     (projectId: string, e: ThreeEvent<PointerEvent>) => {
       e.stopPropagation();
       if (controls) controls.enabled = false;
+
+      // Lock cell size for the duration of this drag
+      dragCellSize.current = getCellSize(projectId);
 
       const state = useStore.getState();
       const projectRooms = state.rooms.filter((r) => r.projectId === projectId);

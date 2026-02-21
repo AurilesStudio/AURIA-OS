@@ -226,6 +226,9 @@ export interface Project {
   id: string;
   name: string;
   layoutType?: "standard" | "trading" | "project-management" | "arena";
+  gridCellSize?: number;
+  gridColumns?: number;
+  gridRows?: number;
 }
 
 /** Trading rooms use a larger footprint */

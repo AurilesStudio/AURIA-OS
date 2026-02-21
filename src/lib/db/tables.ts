@@ -20,6 +20,9 @@ export interface ProjectRow {
   name: string;
   layout_type: string | null;
   sort_order: number;
+  grid_cell_size: number | null;
+  grid_columns: number | null;
+  grid_rows: number | null;
 }
 
 export function projectToRow(p: Project, index: number): ProjectRow {
@@ -28,6 +31,9 @@ export function projectToRow(p: Project, index: number): ProjectRow {
     name: p.name,
     layout_type: p.layoutType ?? null,
     sort_order: index,
+    grid_cell_size: p.gridCellSize ?? null,
+    grid_columns: p.gridColumns ?? null,
+    grid_rows: p.gridRows ?? null,
   };
 }
 
@@ -36,6 +42,9 @@ export function rowToProject(r: ProjectRow): Project {
     id: r.id,
     name: r.name,
     ...(r.layout_type ? { layoutType: r.layout_type as Project["layoutType"] } : {}),
+    ...(r.grid_cell_size != null ? { gridCellSize: r.grid_cell_size } : {}),
+    ...(r.grid_columns != null ? { gridColumns: r.grid_columns } : {}),
+    ...(r.grid_rows != null ? { gridRows: r.grid_rows } : {}),
   };
 }
 
@@ -286,6 +295,9 @@ export interface UserSettingsRow {
   trading_kill_switch: boolean;
   opportunity_alerts_enabled: boolean;
   grid_overlay_enabled: boolean;
+  grid_cell_size: number;
+  grid_width: number;
+  grid_height: number;
 }
 
 export interface UserSettingsState {
@@ -297,6 +309,9 @@ export interface UserSettingsState {
   tradingKillSwitch: boolean;
   opportunityAlertsEnabled: boolean;
   gridOverlayEnabled: boolean;
+  gridCellSize: number;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 export function settingsToRow(s: UserSettingsState): UserSettingsRow {
@@ -310,6 +325,9 @@ export function settingsToRow(s: UserSettingsState): UserSettingsRow {
     trading_kill_switch: s.tradingKillSwitch,
     opportunity_alerts_enabled: s.opportunityAlertsEnabled,
     grid_overlay_enabled: s.gridOverlayEnabled,
+    grid_cell_size: s.gridCellSize,
+    grid_width: s.gridWidth,
+    grid_height: s.gridHeight,
   };
 }
 
@@ -323,5 +341,8 @@ export function rowToSettings(r: UserSettingsRow): UserSettingsState {
     tradingKillSwitch: r.trading_kill_switch,
     opportunityAlertsEnabled: r.opportunity_alerts_enabled,
     gridOverlayEnabled: r.grid_overlay_enabled,
+    gridCellSize: r.grid_cell_size ?? 2,
+    gridWidth: r.grid_width ?? 200,
+    gridHeight: r.grid_height ?? 200,
   };
 }

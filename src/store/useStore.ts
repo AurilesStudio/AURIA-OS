@@ -325,6 +325,9 @@ interface AuriaStore {
   addProject: (name: string) => void;
   renameProject: (projectId: string, name: string) => void;
   removeProject: (projectId: string) => void;
+  setProjectGridCellSize: (projectId: string, size: number) => void;
+  setProjectGridColumns: (projectId: string, cols: number) => void;
+  setProjectGridRows: (projectId: string, rows: number) => void;
 
   // AURIA Command Center
   commandCenterOpen: boolean;
@@ -419,6 +422,14 @@ interface AuriaStore {
   // Grid overlay
   gridOverlayEnabled: boolean;
   setGridOverlayEnabled: (enabled: boolean) => void;
+
+  // Grid configuration
+  gridCellSize: number;
+  gridWidth: number;
+  gridHeight: number;
+  setGridCellSize: (size: number) => void;
+  setGridWidth: (width: number) => void;
+  setGridHeight: (height: number) => void;
 
   // Room position update
   updateRoomPosition: (roomId: string, position: [number, number, number]) => void;
@@ -535,6 +546,27 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     set((state) => ({
       workspaceProjects: state.workspaceProjects.map((p) =>
         p.id === projectId ? { ...p, name } : p,
+      ),
+    })),
+
+  setProjectGridCellSize: (projectId, size) =>
+    set((state) => ({
+      workspaceProjects: state.workspaceProjects.map((p) =>
+        p.id === projectId ? { ...p, gridCellSize: size } : p,
+      ),
+    })),
+
+  setProjectGridColumns: (projectId, cols) =>
+    set((state) => ({
+      workspaceProjects: state.workspaceProjects.map((p) =>
+        p.id === projectId ? { ...p, gridColumns: cols } : p,
+      ),
+    })),
+
+  setProjectGridRows: (projectId, rows) =>
+    set((state) => ({
+      workspaceProjects: state.workspaceProjects.map((p) =>
+        p.id === projectId ? { ...p, gridRows: rows } : p,
       ),
     })),
 
@@ -1094,6 +1126,14 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   gridOverlayEnabled: false,
   setGridOverlayEnabled: (enabled) => set({ gridOverlayEnabled: enabled }),
 
+  // ── Grid configuration ────────────────────────────────────
+  gridCellSize: 2,
+  gridWidth: 200,
+  gridHeight: 200,
+  setGridCellSize: (size) => set({ gridCellSize: size }),
+  setGridWidth: (width) => set({ gridWidth: width }),
+  setGridHeight: (height) => set({ gridHeight: height }),
+
   // ── Room position update ───────────────────────────────────
   updateRoomPosition: (roomId, position) =>
     set((state) => ({
@@ -1273,6 +1313,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     tradingKillSwitch: state.tradingKillSwitch,
     opportunityAlertsEnabled: state.opportunityAlertsEnabled,
     gridOverlayEnabled: state.gridOverlayEnabled,
+    gridCellSize: state.gridCellSize,
+    gridWidth: state.gridWidth,
+    gridHeight: state.gridHeight,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
@@ -1301,6 +1344,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       tradingKillSwitch?: boolean;
       opportunityAlertsEnabled?: boolean;
       gridOverlayEnabled?: boolean;
+      gridCellSize?: number;
+      gridWidth?: number;
+      gridHeight?: number;
     } | undefined;
     if (!saved) return current;
 
@@ -1366,10 +1412,13 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const tradingKillSwitch = saved.tradingKillSwitch ?? current.tradingKillSwitch;
     const opportunityAlertsEnabled = saved.opportunityAlertsEnabled ?? current.opportunityAlertsEnabled;
     const gridOverlayEnabled = saved.gridOverlayEnabled ?? current.gridOverlayEnabled;
+    const gridCellSize = saved.gridCellSize ?? current.gridCellSize;
+    const gridWidth = saved.gridWidth ?? current.gridWidth;
+    const gridHeight = saved.gridHeight ?? current.gridHeight;
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight };
     }
 
     // Build map of default avatars for merging
@@ -1418,7 +1467,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
     const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight };
   },
 }));
 
@@ -1470,6 +1519,9 @@ if (isSupabaseEnabled()) {
           tradingKillSwitch: s.tradingKillSwitch,
           opportunityAlertsEnabled: s.opportunityAlertsEnabled,
           gridOverlayEnabled: s.gridOverlayEnabled,
+          gridCellSize: s.gridCellSize,
+          gridWidth: s.gridWidth,
+          gridHeight: s.gridHeight,
         });
       }
     } catch (err) {

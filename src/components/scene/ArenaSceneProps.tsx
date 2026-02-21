@@ -13,7 +13,7 @@ class GlbErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
 }
 
 function ArenaModel() {
-  const gltf = useGLTF("/models/Décorations/Arena.glb");
+  const gltf = useGLTF("/models/decorations/Arena.glb");
 
   const scene = useMemo(() => {
     const c = gltf.scene.clone(true);
