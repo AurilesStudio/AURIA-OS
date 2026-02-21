@@ -297,11 +297,18 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Modal création/édition~~ ✅ MemoryModal AnimatePresence, champs titre/catégorie/source/content (textarea mono 10 lignes), suppression avec confirmation inline
 - ~~API actions pour AURIA~~ ✅ Service `memoryActions.ts` avec `createMemoryAPI()` : CRUD validé (createMemory, updateMemory, deleteMemory), queries (listMemories, searchMemories, getRecent, getMemory), validation catégories (AURI-64)
 
-## 8. Roadmap Phase 5+ (Prochaine)
+#### Phase 5 — Team Module (AURI-65 → AURI-68) ✅ Complete
+- ~~Modèle de données MCTeamAgent~~ ✅ Déjà implémenté dans Phase 0 : type `MCTeamAgent` + CRUD store + sync Supabase `mc_team_agents` (AURI-65)
+- ~~Organigramme visuel~~ ✅ TeamGrid responsive (1/2/3 colonnes), AgentCard overlay-glass avec avatar (image ou Bot icon), nom, rôle, status indicator (active=vert, idle=amber, offline=gris), responsibilities preview, task count (AURI-66)
+- ~~Création et gestion de sous-agents~~ ✅ AgentModal AnimatePresence, champs name/role/status/responsibilities/avatarUrl, suppression avec confirmation inline (AURI-68)
+  - **TeamHeader :** Compteur + barre de recherche (name+role+responsibilities) + filtres statut (pills All/Active/Idle/Offline) + bouton "+ New Agent" (mc-accent)
+- ~~API actions pour AURIA~~ ✅ Service `teamActions.ts` avec `createTeamAPI()` : CRUD validé (createAgent, updateAgent, setStatus, logTask, deleteAgent), queries (listAgents, getActiveAgents, getAgent), validation statuts
+
+## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
 3. Linear / Notion / GitHub sync temps réel.
 4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
-7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory~~ ✅ — Team reste à implémenter (voir §4.15).
+7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team~~ ✅ — Tous les 5 modules implémentés.

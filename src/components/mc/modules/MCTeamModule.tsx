@@ -1,19 +1,67 @@
-import { Users } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useStore } from "@/store/useStore";
+import { TeamHeader } from "../team/TeamHeader";
+import { TeamGrid } from "../team/TeamGrid";
+import { AgentModal } from "../team/AgentModal";
+import type { MCTeamAgent, MCTeamAgentStatus } from "@/types/mission-control";
 
 export function MCTeamModule() {
-  const count = useStore((s) => s.mcTeamAgents.length);
+  const agents = useStore((s) => s.mcTeamAgents);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editAgent, setEditAgent] = useState<MCTeamAgent | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<MCTeamAgentStatus | "">("");
+
+  const filtered = useMemo(() => {
+    let result = agents;
+
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.role.toLowerCase().includes(q) ||
+          a.responsibilities.toLowerCase().includes(q),
+      );
+    }
+
+    if (statusFilter) {
+      result = result.filter((a) => a.status === statusFilter);
+    }
+
+    return result;
+  }, [agents, search, statusFilter]);
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4">
-      <Users className="h-12 w-12 text-text-muted/30" />
-      <h2 className="text-lg font-semibold text-text-primary">Team</h2>
-      <p className="text-sm text-text-muted">
-        {count > 0 ? `${count} agent${count > 1 ? "s" : ""}` : "No team agents yet"}
-      </p>
-      <p className="max-w-sm text-center text-xs text-text-muted/60">
-        Manage your AI agents, their roles, and responsibilities.
-      </p>
+    <div className="flex h-full flex-col">
+      <TeamHeader
+        count={filtered.length}
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+        onNewAgent={() => setCreateOpen(true)}
+      />
+
+      <TeamGrid
+        agents={filtered}
+        onEdit={setEditAgent}
+      />
+
+      {/* Create modal */}
+      <AgentModal
+        open={createOpen}
+        agent={null}
+        onClose={() => setCreateOpen(false)}
+      />
+
+      {/* Edit modal */}
+      <AgentModal
+        open={editAgent !== null}
+        agent={editAgent}
+        onClose={() => setEditAgent(null)}
+      />
     </div>
   );
 }
