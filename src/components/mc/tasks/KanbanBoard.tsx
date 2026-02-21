@@ -13,9 +13,15 @@ const COLUMNS: ColumnConfig[] = [
   { status: "cancelled", label: "Cancelled", color: "#ff003c" },
 ];
 
-export function KanbanBoard() {
-  const tasks = useStore((s) => s.mcTasks);
+interface KanbanBoardProps {
+  filteredTasks?: MCTask[];
+}
+
+export function KanbanBoard({ filteredTasks }: KanbanBoardProps) {
+  const allTasks = useStore((s) => s.mcTasks);
   const updateMCTask = useStore((s) => s.updateMCTask);
+
+  const tasks = filteredTasks ?? allTasks;
 
   const [editingTask, setEditingTask] = useState<MCTask | null>(null);
 
