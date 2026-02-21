@@ -246,6 +246,17 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - `mc_memories` : Base de connaissances avec category/source + index full-text (french)
   - `mc_team_agents` : Agents MC avec role/responsibilities/taskHistory
 - Authentification token gateway (AURI-41)
+
+#### Phase 1 — Tasks Board (AURI-43 / AURI-44 / AURI-45)
+- ~~Modèle de données MCTask~~ ✅ Déjà implémenté dans Phase 0 : type `MCTask` + CRUD store + sync Supabase `mc_tasks` (AURI-43)
+- ~~Vue Kanban avec drag & drop~~ ✅ Board 5 colonnes (Backlog, To Do, In Progress, Done, Cancelled) avec `@hello-pangea/dnd`, TaskCard draggable, KanbanColumn droppable (AURI-44)
+  - **KanbanBoard :** DragDropContext + 5 colonnes + handleDragEnd → updateMCTask(status)
+  - **KanbanColumn :** Header (dot couleur + label + badge compteur) + liste de TaskCards
+  - **TaskCard :** Carte overlay-glass draggable (titre line-clamp-2, dot priorité, assignee, labels chips)
+- ~~Modal création/édition tâche~~ ✅ TaskModal AnimatePresence, mode create/edit, champs titre/description/status/priority/assignee/labels, suppression avec confirmation inline (AURI-45)
+  - **TaskBoardHeader :** Barre compteur total + bouton "+ New Task" (mc-accent)
+  - **MCTasksModule :** Remplacé placeholder par TaskBoardHeader + KanbanBoard
+
 - ~~Layout principal + Navigation entre modules~~ ✅ MCSidebar + MCHeader + MCLayout + 5 placeholders modules (AURI-42)
   - **MCSidebar :** Navigation principale (bord gauche, z-10), 6 modules (Office, Tasks, Content, Calendar, Memory, Team), collapsible 56px/200px, icônes Lucide, indicateur actif cyan, statut AURIA (online/offline)
   - **MCHeader :** Header 48px avec titre du module actif + badge statut AURIA + nom utilisateur
