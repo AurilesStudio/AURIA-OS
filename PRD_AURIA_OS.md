@@ -246,7 +246,15 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - `mc_memories` : Base de connaissances avec category/source + index full-text (french)
   - `mc_team_agents` : Agents MC avec role/responsibilities/taskHistory
 - Authentification token gateway (AURI-41)
-- Layout principal + Navigation entre modules (AURI-42)
+- ~~Layout principal + Navigation entre modules~~ ✅ MCSidebar + MCHeader + MCLayout + 5 placeholders modules (AURI-42)
+  - **MCSidebar :** Navigation principale (bord gauche, z-10), 6 modules (Office, Tasks, Content, Calendar, Memory, Team), collapsible 56px/200px, icônes Lucide, indicateur actif cyan, statut AURIA (online/offline)
+  - **MCHeader :** Header 48px avec titre du module actif + badge statut AURIA + nom utilisateur
+  - **MCLayout :** Shell layout intégrant sidebar + header + contenu module
+  - **MCModuleContent :** Router AnimatePresence entre modules, return null pour Office
+  - **Placeholders :** Chaque module non-Office affiche un empty-state centré (icône, titre, compteur d'items du store)
+  - **Office mode :** Scène 3D + DashboardOverlay existant (décalé à droite par la sidebar)
+  - **Autres modules :** Panneau pleine largeur par-dessus la scène avec overlay dim (bg-base/70)
+  - **CSS :** Variable `--color-mc-accent: #00ffff`, utilitaire `.glow-mc`
 
 ## 8. Roadmap Phase 3 (Prochaine)
 1. Exécution réelle des tâches par les agents via LLM.

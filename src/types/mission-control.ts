@@ -1,5 +1,8 @@
 // ── Mission Control Types ─────────────────────────────────────
 
+/** Top-level navigation modules */
+export type MCModule = "office" | "tasks" | "content" | "calendar" | "memory" | "team";
+
 /** Task status workflow: backlog → todo → in_progress → done | cancelled */
 export type MCTaskStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
 export type MCTaskPriority = "none" | "low" | "medium" | "high" | "urgent";

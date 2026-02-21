@@ -7,6 +7,7 @@
   --color-neon-pink: #ff2d7a;
   --color-neon-cyan: #00ffcc;
   --color-trading-amber: #f59e0b;
+  --color-mc-accent: #00ffff;
 
   /* Backgrounds */
   --color-bg-base: #030305;
@@ -92,6 +93,11 @@ body {
 .glow-amber {
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.3),
     0 0 60px rgba(245, 158, 11, 0.1);
+}
+
+.glow-mc {
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+    0 0 60px rgba(0, 255, 255, 0.1);
 }
 
 /* Text glow */

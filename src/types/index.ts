@@ -88,6 +88,7 @@ export type { AppearanceEntry } from "./appearance";
 
 // Mission Control types
 export type {
+  MCModule,
   MCTask,
   MCTaskStatus,
   MCTaskPriority,

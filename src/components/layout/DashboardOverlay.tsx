@@ -325,13 +325,16 @@ export function DashboardOverlay() {
   const [activePanel, setActivePanel] = useState<PanelId>(null);
   const fpvActive = useStore((s) => s.auriaFpvActive);
   const editMode = useStore((s) => s.editMode);
+  const sidebarCollapsed = useStore((s) => s.mcSidebarCollapsed);
+
+  const sidebarWidth = sidebarCollapsed ? 56 : 200;
 
   const toggle = (id: PanelId) => {
     setActivePanel((prev) => (prev === id ? null : id));
   };
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-10 flex">
+    <div className="pointer-events-none fixed inset-0 z-10 flex" style={{ paddingLeft: sidebarWidth }}>
       {/* Thin icon sidebar */}
       <div className="pointer-events-auto flex flex-col items-center gap-1 px-2 py-4">
         <div className="flex flex-col gap-1 rounded-xl bg-bg-surface/80 p-1.5 backdrop-blur-sm border border-white/5">

@@ -14,6 +14,7 @@ import type {
   Project,
   TeamTemplate,
   RoleDefinition,
+  MCModule,
   MCTask,
   MCCalendarEvent,
   MCContentItem,
@@ -484,6 +485,12 @@ interface AuriaStore {
   addMCTeamAgent: (agent: Omit<MCTeamAgent, "id" | "createdAt" | "updatedAt">) => void;
   updateMCTeamAgent: (agentId: string, data: Partial<Omit<MCTeamAgent, "id">>) => void;
   removeMCTeamAgent: (agentId: string) => void;
+
+  // Mission Control navigation
+  mcActiveModule: MCModule;
+  setMCActiveModule: (module: MCModule) => void;
+  mcSidebarCollapsed: boolean;
+  toggleMCSidebar: () => void;
 
   // AURIA FPV (not persisted)
   auriaFpvActive: boolean;
@@ -1382,6 +1389,17 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   removeMCTeamAgent: (agentId) =>
     set((state) => ({ mcTeamAgents: state.mcTeamAgents.filter((a) => a.id !== agentId) })),
 
+  // ── Mission Control navigation ─────────────────────────────
+  mcActiveModule: "office" as MCModule,
+  setMCActiveModule: (module) =>
+    set((state) => ({
+      mcActiveModule: module,
+      // Disable FPV when leaving Office
+      ...(module !== "office" && state.auriaFpvActive ? { auriaFpvActive: false } : {}),
+    })),
+  mcSidebarCollapsed: false,
+  toggleMCSidebar: () => set((state) => ({ mcSidebarCollapsed: !state.mcSidebarCollapsed })),
+
   // ── AURIA FPV ──────────────────────────────────────────────
   auriaFpvActive: false,
   setAuriaFpvActive: (active) =>
@@ -1429,6 +1447,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     gridCellSize: state.gridCellSize,
     gridWidth: state.gridWidth,
     gridHeight: state.gridHeight,
+    mcSidebarCollapsed: state.mcSidebarCollapsed,
     mcTasks: state.mcTasks,
     mcCalendarEvents: state.mcCalendarEvents,
     mcContentPipeline: state.mcContentPipeline,
@@ -1465,6 +1484,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       gridCellSize?: number;
       gridWidth?: number;
       gridHeight?: number;
+      mcSidebarCollapsed?: boolean;
       mcTasks?: MCTask[];
       mcCalendarEvents?: MCCalendarEvent[];
       mcContentPipeline?: MCContentItem[];
@@ -1540,6 +1560,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const gridHeight = saved.gridHeight ?? current.gridHeight;
 
     // Merge Mission Control slices
+    const mcSidebarCollapsed = saved.mcSidebarCollapsed ?? current.mcSidebarCollapsed;
     const mcTasks = saved.mcTasks ?? current.mcTasks;
     const mcCalendarEvents = saved.mcCalendarEvents ?? current.mcCalendarEvents;
     const mcContentPipeline = saved.mcContentPipeline ?? current.mcContentPipeline;
@@ -1548,7 +1569,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
     }
 
     // Build map of default avatars for merging
@@ -1597,7 +1618,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
     const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
   },
 }));
 
