@@ -11,6 +11,11 @@ import type {
   TeamTemplate,
   AppearanceEntry,
   LLMProvider,
+  MCTask,
+  MCCalendarEvent,
+  MCContentItem,
+  MCMemory,
+  MCTeamAgent,
 } from "@/types";
 
 // ── projects ────────────────────────────────────────────────────
@@ -344,5 +349,215 @@ export function rowToSettings(r: UserSettingsRow): UserSettingsState {
     gridCellSize: r.grid_cell_size ?? 2,
     gridWidth: r.grid_width ?? 200,
     gridHeight: r.grid_height ?? 200,
+  };
+}
+
+// ── mc_tasks ─────────────────────────────────────────────────
+
+export interface MCTaskRow {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  assignee_id: string;
+  labels: string[];
+  project_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export function mcTaskToRow(t: MCTask): MCTaskRow {
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    status: t.status,
+    priority: t.priority,
+    assignee_id: t.assigneeId,
+    labels: t.labels,
+    project_id: t.projectId,
+    created_at: t.createdAt,
+    updated_at: t.updatedAt,
+  };
+}
+
+export function rowToMCTask(r: MCTaskRow): MCTask {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    status: r.status as MCTask["status"],
+    priority: r.priority as MCTask["priority"],
+    assigneeId: r.assignee_id,
+    labels: r.labels ?? [],
+    projectId: r.project_id,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+// ── mc_calendar_events ───────────────────────────────────────
+
+export interface MCCalendarEventRow {
+  id: string;
+  title: string;
+  type: string;
+  start_date: number;
+  end_date: number;
+  status: string;
+  execution_result: string;
+  project_id: string;
+  created_at: number;
+}
+
+export function mcCalendarEventToRow(e: MCCalendarEvent): MCCalendarEventRow {
+  return {
+    id: e.id,
+    title: e.title,
+    type: e.type,
+    start_date: e.startDate,
+    end_date: e.endDate,
+    status: e.status,
+    execution_result: e.executionResult,
+    project_id: e.projectId,
+    created_at: e.createdAt,
+  };
+}
+
+export function rowToMCCalendarEvent(r: MCCalendarEventRow): MCCalendarEvent {
+  return {
+    id: r.id,
+    title: r.title,
+    type: r.type as MCCalendarEvent["type"],
+    startDate: r.start_date,
+    endDate: r.end_date,
+    status: r.status as MCCalendarEvent["status"],
+    executionResult: r.execution_result,
+    projectId: r.project_id,
+    createdAt: r.created_at,
+  };
+}
+
+// ── mc_content_pipeline ──────────────────────────────────────
+
+export interface MCContentItemRow {
+  id: string;
+  title: string;
+  stage: string;
+  platform: string;
+  script: string;
+  media_urls: string[];
+  scheduled_date: number | null;
+  project_id: string;
+  created_at: number;
+}
+
+export function mcContentItemToRow(c: MCContentItem): MCContentItemRow {
+  return {
+    id: c.id,
+    title: c.title,
+    stage: c.stage,
+    platform: c.platform,
+    script: c.script,
+    media_urls: c.mediaUrls,
+    scheduled_date: c.scheduledDate,
+    project_id: c.projectId,
+    created_at: c.createdAt,
+  };
+}
+
+export function rowToMCContentItem(r: MCContentItemRow): MCContentItem {
+  return {
+    id: r.id,
+    title: r.title,
+    stage: r.stage as MCContentItem["stage"],
+    platform: r.platform,
+    script: r.script,
+    mediaUrls: r.media_urls ?? [],
+    scheduledDate: r.scheduled_date,
+    projectId: r.project_id,
+    createdAt: r.created_at,
+  };
+}
+
+// ── mc_memories ──────────────────────────────────────────────
+
+export interface MCMemoryRow {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  source: string;
+  project_id: string;
+  created_at: number;
+}
+
+export function mcMemoryToRow(m: MCMemory): MCMemoryRow {
+  return {
+    id: m.id,
+    title: m.title,
+    content: m.content,
+    category: m.category,
+    source: m.source,
+    project_id: m.projectId,
+    created_at: m.createdAt,
+  };
+}
+
+export function rowToMCMemory(r: MCMemoryRow): MCMemory {
+  return {
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    category: r.category as MCMemory["category"],
+    source: r.source,
+    projectId: r.project_id,
+    createdAt: r.created_at,
+  };
+}
+
+// ── mc_team_agents ───────────────────────────────────────────
+
+export interface MCTeamAgentRow {
+  id: string;
+  name: string;
+  role: string;
+  responsibilities: string;
+  status: string;
+  avatar_url: string;
+  task_history: string[];
+  project_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export function mcTeamAgentToRow(a: MCTeamAgent): MCTeamAgentRow {
+  return {
+    id: a.id,
+    name: a.name,
+    role: a.role,
+    responsibilities: a.responsibilities,
+    status: a.status,
+    avatar_url: a.avatarUrl,
+    task_history: a.taskHistory,
+    project_id: a.projectId,
+    created_at: a.createdAt,
+    updated_at: a.updatedAt,
+  };
+}
+
+export function rowToMCTeamAgent(r: MCTeamAgentRow): MCTeamAgent {
+  return {
+    id: r.id,
+    name: r.name,
+    role: r.role,
+    responsibilities: r.responsibilities,
+    status: r.status as MCTeamAgent["status"],
+    avatarUrl: r.avatar_url,
+    taskHistory: r.task_history ?? [],
+    projectId: r.project_id,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   };
 }

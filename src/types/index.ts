@@ -85,3 +85,19 @@ export {
 } from "./avatar";
 
 export type { AppearanceEntry } from "./appearance";
+
+// Mission Control types
+export type {
+  MCTask,
+  MCTaskStatus,
+  MCTaskPriority,
+  MCCalendarEvent,
+  MCCalendarEventType,
+  MCCalendarEventStatus,
+  MCContentItem,
+  MCContentStage,
+  MCMemory,
+  MCMemoryCategory,
+  MCTeamAgent,
+  MCTeamAgentStatus,
+} from "./mission-control";

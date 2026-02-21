@@ -14,6 +14,11 @@ import type {
   Project,
   TeamTemplate,
   RoleDefinition,
+  MCTask,
+  MCCalendarEvent,
+  MCContentItem,
+  MCMemory,
+  MCTeamAgent,
 } from "@/types";
 import {
   ROOM_SIZE,
@@ -453,6 +458,32 @@ interface AuriaStore {
   removeTeamTemplate: (id: string) => void;
   deployTeamToProject: (templateId: string, projectId: string) => void;
   saveProjectTeamAsTemplate: (projectId: string, name: string) => void;
+
+  // ── Mission Control ──────────────────────────────────────────
+  mcTasks: MCTask[];
+  addMCTask: (task: Omit<MCTask, "id" | "createdAt" | "updatedAt">) => void;
+  updateMCTask: (taskId: string, data: Partial<Omit<MCTask, "id">>) => void;
+  removeMCTask: (taskId: string) => void;
+
+  mcCalendarEvents: MCCalendarEvent[];
+  addMCCalendarEvent: (event: Omit<MCCalendarEvent, "id" | "createdAt">) => void;
+  updateMCCalendarEvent: (eventId: string, data: Partial<Omit<MCCalendarEvent, "id">>) => void;
+  removeMCCalendarEvent: (eventId: string) => void;
+
+  mcContentPipeline: MCContentItem[];
+  addMCContentItem: (item: Omit<MCContentItem, "id" | "createdAt">) => void;
+  updateMCContentItem: (itemId: string, data: Partial<Omit<MCContentItem, "id">>) => void;
+  removeMCContentItem: (itemId: string) => void;
+
+  mcMemories: MCMemory[];
+  addMCMemory: (memory: Omit<MCMemory, "id" | "createdAt">) => void;
+  updateMCMemory: (memoryId: string, data: Partial<Omit<MCMemory, "id">>) => void;
+  removeMCMemory: (memoryId: string) => void;
+
+  mcTeamAgents: MCTeamAgent[];
+  addMCTeamAgent: (agent: Omit<MCTeamAgent, "id" | "createdAt" | "updatedAt">) => void;
+  updateMCTeamAgent: (agentId: string, data: Partial<Omit<MCTeamAgent, "id">>) => void;
+  removeMCTeamAgent: (agentId: string) => void;
 
   // AURIA FPV (not persisted)
   auriaFpvActive: boolean;
@@ -1120,7 +1151,12 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
   // ── Edit mode (room dragging) ────────────────────────────────
   editMode: false,
-  setEditMode: (enabled) => set({ editMode: enabled }),
+  setEditMode: (enabled) => {
+    set({ editMode: enabled });
+    // When leaving edit mode, immediately flush positions to Supabase
+    // (positions are debounced at 2s, this ensures they're saved before a potential refresh)
+    if (!enabled) flushSync();
+  },
 
   // ── Grid overlay ───────────────────────────────────────────
   gridOverlayEnabled: false,
@@ -1269,6 +1305,83 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       return { teamTemplates: [...state.teamTemplates, template] };
     }),
 
+  // ── Mission Control ───────────────────────────────────────
+  mcTasks: [],
+  addMCTask: (task) =>
+    set((state) => {
+      const now = Date.now();
+      return {
+        mcTasks: [...state.mcTasks, { ...task, id: `mctask-${generateId()}`, createdAt: now, updatedAt: now }],
+      };
+    }),
+  updateMCTask: (taskId, data) =>
+    set((state) => ({
+      mcTasks: state.mcTasks.map((t) =>
+        t.id === taskId ? { ...t, ...data, updatedAt: Date.now() } : t,
+      ),
+    })),
+  removeMCTask: (taskId) =>
+    set((state) => ({ mcTasks: state.mcTasks.filter((t) => t.id !== taskId) })),
+
+  mcCalendarEvents: [],
+  addMCCalendarEvent: (event) =>
+    set((state) => ({
+      mcCalendarEvents: [...state.mcCalendarEvents, { ...event, id: `mcevent-${generateId()}`, createdAt: Date.now() }],
+    })),
+  updateMCCalendarEvent: (eventId, data) =>
+    set((state) => ({
+      mcCalendarEvents: state.mcCalendarEvents.map((e) =>
+        e.id === eventId ? { ...e, ...data } : e,
+      ),
+    })),
+  removeMCCalendarEvent: (eventId) =>
+    set((state) => ({ mcCalendarEvents: state.mcCalendarEvents.filter((e) => e.id !== eventId) })),
+
+  mcContentPipeline: [],
+  addMCContentItem: (item) =>
+    set((state) => ({
+      mcContentPipeline: [...state.mcContentPipeline, { ...item, id: `mccontent-${generateId()}`, createdAt: Date.now() }],
+    })),
+  updateMCContentItem: (itemId, data) =>
+    set((state) => ({
+      mcContentPipeline: state.mcContentPipeline.map((c) =>
+        c.id === itemId ? { ...c, ...data } : c,
+      ),
+    })),
+  removeMCContentItem: (itemId) =>
+    set((state) => ({ mcContentPipeline: state.mcContentPipeline.filter((c) => c.id !== itemId) })),
+
+  mcMemories: [],
+  addMCMemory: (memory) =>
+    set((state) => ({
+      mcMemories: [...state.mcMemories, { ...memory, id: `mcmem-${generateId()}`, createdAt: Date.now() }],
+    })),
+  updateMCMemory: (memoryId, data) =>
+    set((state) => ({
+      mcMemories: state.mcMemories.map((m) =>
+        m.id === memoryId ? { ...m, ...data } : m,
+      ),
+    })),
+  removeMCMemory: (memoryId) =>
+    set((state) => ({ mcMemories: state.mcMemories.filter((m) => m.id !== memoryId) })),
+
+  mcTeamAgents: [],
+  addMCTeamAgent: (agent) =>
+    set((state) => {
+      const now = Date.now();
+      return {
+        mcTeamAgents: [...state.mcTeamAgents, { ...agent, id: `mcagent-${generateId()}`, createdAt: now, updatedAt: now }],
+      };
+    }),
+  updateMCTeamAgent: (agentId, data) =>
+    set((state) => ({
+      mcTeamAgents: state.mcTeamAgents.map((a) =>
+        a.id === agentId ? { ...a, ...data, updatedAt: Date.now() } : a,
+      ),
+    })),
+  removeMCTeamAgent: (agentId) =>
+    set((state) => ({ mcTeamAgents: state.mcTeamAgents.filter((a) => a.id !== agentId) })),
+
   // ── AURIA FPV ──────────────────────────────────────────────
   auriaFpvActive: false,
   setAuriaFpvActive: (active) =>
@@ -1316,6 +1429,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     gridCellSize: state.gridCellSize,
     gridWidth: state.gridWidth,
     gridHeight: state.gridHeight,
+    mcTasks: state.mcTasks,
+    mcCalendarEvents: state.mcCalendarEvents,
+    mcContentPipeline: state.mcContentPipeline,
+    mcMemories: state.mcMemories,
+    mcTeamAgents: state.mcTeamAgents,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
@@ -1347,6 +1465,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       gridCellSize?: number;
       gridWidth?: number;
       gridHeight?: number;
+      mcTasks?: MCTask[];
+      mcCalendarEvents?: MCCalendarEvent[];
+      mcContentPipeline?: MCContentItem[];
+      mcMemories?: MCMemory[];
+      mcTeamAgents?: MCTeamAgent[];
     } | undefined;
     if (!saved) return current;
 
@@ -1416,9 +1539,16 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const gridWidth = saved.gridWidth ?? current.gridWidth;
     const gridHeight = saved.gridHeight ?? current.gridHeight;
 
+    // Merge Mission Control slices
+    const mcTasks = saved.mcTasks ?? current.mcTasks;
+    const mcCalendarEvents = saved.mcCalendarEvents ?? current.mcCalendarEvents;
+    const mcContentPipeline = saved.mcContentPipeline ?? current.mcContentPipeline;
+    const mcMemories = saved.mcMemories ?? current.mcMemories;
+    const mcTeamAgents = saved.mcTeamAgents ?? current.mcTeamAgents;
+
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
     }
 
     // Build map of default avatars for merging
@@ -1467,7 +1597,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
     const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
   },
 }));
 
@@ -1488,6 +1618,11 @@ if (isSupabaseEnabled()) {
       const remote = await loadFromSupabase();
 
       if (remote) {
+        // Snapshot local positions (from localStorage, always most recent) BEFORE overlay
+        const local = useStore.getState();
+        const localRoomPos = new Map(local.rooms.map((r) => [r.id, r.position]));
+        const localAvatarPos = new Map(local.avatars.map((a) => [a.id, a.position]));
+
         // Overlay remote data, inject AURIA + PM avatars only if missing
         const remoteAvatars = remote.avatars ?? [];
         const remoteIds = new Set(remoteAvatars.map((a) => a.id));
@@ -1495,11 +1630,26 @@ if (isSupabaseEnabled()) {
         const missingDefaults = systemDefaults.filter((d) => !remoteIds.has(d.id));
         const mergedAvatars = [...remoteAvatars, ...missingDefaults];
 
+        // Merge rooms: use Supabase data but preserve local positions
+        // (localStorage is written synchronously, so it's always fresher than Supabase which is debounced)
+        const mergedRooms = remote.rooms
+          ? remote.rooms.map((r) => ({
+              ...r,
+              position: localRoomPos.get(r.id) ?? r.position,
+            }))
+          : undefined;
+
+        const mergedAvatarsWithPos = mergedAvatars.map((a) => ({
+          ...a,
+          position: localAvatarPos.get(a.id) ?? a.position,
+        }));
+
         useStore.setState({
           ...remote,
-          avatars: mergedAvatars,
+          ...(mergedRooms ? { rooms: mergedRooms } : {}),
+          avatars: mergedAvatarsWithPos,
         });
-        console.info("[supabase] state overlayed from cloud");
+        console.info("[supabase] state overlayed from cloud (local positions preserved)");
       } else {
         // Tables are empty — seed them with current (localStorage-hydrated) state
         const s = useStore.getState();
@@ -1511,6 +1661,11 @@ if (isSupabaseEnabled()) {
           gauges: s.gauges,
           teamTemplates: s.teamTemplates,
           appearances: s.appearances,
+          mcTasks: s.mcTasks,
+          mcCalendarEvents: s.mcCalendarEvents,
+          mcContentPipeline: s.mcContentPipeline,
+          mcMemories: s.mcMemories,
+          mcTeamAgents: s.mcTeamAgents,
           llmApiKeys: s.llmApiKeys,
           localLlmEndpoint: s.localLlmEndpoint,
           localLlmModel: s.localLlmModel,

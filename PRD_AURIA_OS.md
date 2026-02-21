@@ -239,7 +239,12 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 
 #### Phase 0 — Setup
 - ~~Init projet~~ ✅ Projet Vite + React + Supabase existant (AURI-39)
-- Schema Supabase pour les nouveaux modules (AURI-40)
+- ~~Schema Supabase pour les nouveaux modules~~ ✅ 5 tables MC créées avec types TS, row converters, sync engine, et store Zustand (AURI-40)
+  - `mc_tasks` : Kanban tasks avec status/priority/assignee/labels
+  - `mc_calendar_events` : Events avec type/dates/status/executionResult
+  - `mc_content_pipeline` : Pipeline contenu avec stage/platform/script/mediaUrls
+  - `mc_memories` : Base de connaissances avec category/source + index full-text (french)
+  - `mc_team_agents` : Agents MC avec role/responsibilities/taskHistory
 - Authentification token gateway (AURI-41)
 - Layout principal + Navigation entre modules (AURI-42)
 

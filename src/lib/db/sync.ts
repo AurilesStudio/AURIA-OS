@@ -26,6 +26,16 @@ import {
   rowToAppearance,
   settingsToRow,
   rowToSettings,
+  mcTaskToRow,
+  rowToMCTask,
+  mcCalendarEventToRow,
+  rowToMCCalendarEvent,
+  mcContentItemToRow,
+  rowToMCContentItem,
+  mcMemoryToRow,
+  rowToMCMemory,
+  mcTeamAgentToRow,
+  rowToMCTeamAgent,
   type ProjectRow,
   type RoomRow,
   type RoleRow,
@@ -35,6 +45,11 @@ import {
   type AppearanceRow,
   type UserSettingsRow,
   type UserSettingsState,
+  type MCTaskRow,
+  type MCCalendarEventRow,
+  type MCContentItemRow,
+  type MCMemoryRow,
+  type MCTeamAgentRow,
 } from "./tables";
 import type {
   Project,
@@ -44,6 +59,11 @@ import type {
   TokenGaugeData,
   TeamTemplate,
   AppearanceEntry,
+  MCTask,
+  MCCalendarEvent,
+  MCContentItem,
+  MCMemory,
+  MCTeamAgent,
 } from "@/types";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -57,6 +77,12 @@ export interface SupabaseState {
   gauges: TokenGaugeData[];
   teamTemplates: TeamTemplate[];
   appearances: AppearanceEntry[];
+  // Mission Control
+  mcTasks: MCTask[];
+  mcCalendarEvents: MCCalendarEvent[];
+  mcContentPipeline: MCContentItem[];
+  mcMemories: MCMemory[];
+  mcTeamAgents: MCTeamAgent[];
   // Settings flattened
   llmApiKeys: Record<string, string>;
   localLlmEndpoint: string;
@@ -66,6 +92,9 @@ export interface SupabaseState {
   tradingKillSwitch: boolean;
   opportunityAlertsEnabled: boolean;
   gridOverlayEnabled: boolean;
+  gridCellSize: number;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 // ── Load ────────────────────────────────────────────────────────
@@ -83,6 +112,11 @@ export async function loadFromSupabase(): Promise<Partial<SupabaseState> | null>
       { data: templates },
       { data: appearances },
       { data: settingsRows },
+      { data: mcTasksData },
+      { data: mcEventsData },
+      { data: mcContentData },
+      { data: mcMemoriesData },
+      { data: mcAgentsData },
     ] = await Promise.all([
       supabase.from("projects").select("*").order("sort_order"),
       supabase.from("rooms").select("*"),
@@ -92,6 +126,11 @@ export async function loadFromSupabase(): Promise<Partial<SupabaseState> | null>
       supabase.from("team_templates").select("*"),
       supabase.from("appearances").select("*"),
       supabase.from("user_settings").select("*").eq("id", 1),
+      supabase.from("mc_tasks").select("*"),
+      supabase.from("mc_calendar_events").select("*"),
+      supabase.from("mc_content_pipeline").select("*"),
+      supabase.from("mc_memories").select("*"),
+      supabase.from("mc_team_agents").select("*"),
     ]);
 
     // If all *content* tables are empty, return null (will trigger seed).
@@ -127,6 +166,21 @@ export async function loadFromSupabase(): Promise<Partial<SupabaseState> | null>
       ...(appearances && appearances.length > 0
         ? { appearances: (appearances as AppearanceRow[]).map(rowToAppearance) }
         : {}),
+      ...(mcTasksData && mcTasksData.length > 0
+        ? { mcTasks: (mcTasksData as MCTaskRow[]).map(rowToMCTask) }
+        : {}),
+      ...(mcEventsData && mcEventsData.length > 0
+        ? { mcCalendarEvents: (mcEventsData as MCCalendarEventRow[]).map(rowToMCCalendarEvent) }
+        : {}),
+      ...(mcContentData && mcContentData.length > 0
+        ? { mcContentPipeline: (mcContentData as MCContentItemRow[]).map(rowToMCContentItem) }
+        : {}),
+      ...(mcMemoriesData && mcMemoriesData.length > 0
+        ? { mcMemories: (mcMemoriesData as MCMemoryRow[]).map(rowToMCMemory) }
+        : {}),
+      ...(mcAgentsData && mcAgentsData.length > 0
+        ? { mcTeamAgents: (mcAgentsData as MCTeamAgentRow[]).map(rowToMCTeamAgent) }
+        : {}),
       ...settingsState,
     };
   } catch (err) {
@@ -145,6 +199,11 @@ interface SeedableState {
   gauges: TokenGaugeData[];
   teamTemplates: TeamTemplate[];
   appearances: AppearanceEntry[];
+  mcTasks: MCTask[];
+  mcCalendarEvents: MCCalendarEvent[];
+  mcContentPipeline: MCContentItem[];
+  mcMemories: MCMemory[];
+  mcTeamAgents: MCTeamAgent[];
   llmApiKeys: Record<string, string>;
   localLlmEndpoint: string;
   localLlmModel: string;
@@ -153,6 +212,9 @@ interface SeedableState {
   tradingKillSwitch: boolean;
   opportunityAlertsEnabled: boolean;
   gridOverlayEnabled: boolean;
+  gridCellSize: number;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 export async function seedIfEmpty(state: SeedableState): Promise<void> {
@@ -186,6 +248,21 @@ export async function seedIfEmpty(state: SeedableState): Promise<void> {
       state.appearances.length > 0
         ? supabase.from("appearances").upsert(state.appearances.map(appearanceToRow))
         : null,
+      state.mcTasks.length > 0
+        ? supabase.from("mc_tasks").upsert(state.mcTasks.map(mcTaskToRow))
+        : null,
+      state.mcCalendarEvents.length > 0
+        ? supabase.from("mc_calendar_events").upsert(state.mcCalendarEvents.map(mcCalendarEventToRow))
+        : null,
+      state.mcContentPipeline.length > 0
+        ? supabase.from("mc_content_pipeline").upsert(state.mcContentPipeline.map(mcContentItemToRow))
+        : null,
+      state.mcMemories.length > 0
+        ? supabase.from("mc_memories").upsert(state.mcMemories.map(mcMemoryToRow))
+        : null,
+      state.mcTeamAgents.length > 0
+        ? supabase.from("mc_team_agents").upsert(state.mcTeamAgents.map(mcTeamAgentToRow))
+        : null,
       supabase.from("user_settings").upsert(
         settingsToRow({
           llmApiKeys: state.llmApiKeys,
@@ -196,6 +273,9 @@ export async function seedIfEmpty(state: SeedableState): Promise<void> {
           tradingKillSwitch: state.tradingKillSwitch,
           opportunityAlertsEnabled: state.opportunityAlertsEnabled,
           gridOverlayEnabled: state.gridOverlayEnabled,
+          gridCellSize: state.gridCellSize,
+          gridWidth: state.gridWidth,
+          gridHeight: state.gridHeight,
         }),
       ),
     ]);
@@ -218,6 +298,11 @@ const SYNCED_KEYS = new Set([
   "gauges",
   "teamTemplates",
   "appearances",
+  "mcTasks",
+  "mcCalendarEvents",
+  "mcContentPipeline",
+  "mcMemories",
+  "mcTeamAgents",
   "llmApiKeys",
   "localLlmEndpoint",
   "localLlmModel",
@@ -226,6 +311,9 @@ const SYNCED_KEYS = new Set([
   "tradingKillSwitch",
   "opportunityAlertsEnabled",
   "gridOverlayEnabled",
+  "gridCellSize",
+  "gridWidth",
+  "gridHeight",
 ]);
 
 // Settings keys (flat keys on the store that map to user_settings row)
@@ -238,6 +326,9 @@ const SETTINGS_KEYS = new Set([
   "tradingKillSwitch",
   "opportunityAlertsEnabled",
   "gridOverlayEnabled",
+  "gridCellSize",
+  "gridWidth",
+  "gridHeight",
 ]);
 
 type AnyState = Record<string, unknown>;
@@ -289,6 +380,31 @@ async function upsertSlice(key: string, state: AnyState): Promise<void> {
         await supabase.from("appearances").upsert(appearances.map(appearanceToRow));
         break;
       }
+      case "mcTasks": {
+        const tasks = state.mcTasks as MCTask[];
+        await supabase.from("mc_tasks").upsert(tasks.map(mcTaskToRow));
+        break;
+      }
+      case "mcCalendarEvents": {
+        const events = state.mcCalendarEvents as MCCalendarEvent[];
+        await supabase.from("mc_calendar_events").upsert(events.map(mcCalendarEventToRow));
+        break;
+      }
+      case "mcContentPipeline": {
+        const items = state.mcContentPipeline as MCContentItem[];
+        await supabase.from("mc_content_pipeline").upsert(items.map(mcContentItemToRow));
+        break;
+      }
+      case "mcMemories": {
+        const memories = state.mcMemories as MCMemory[];
+        await supabase.from("mc_memories").upsert(memories.map(mcMemoryToRow));
+        break;
+      }
+      case "mcTeamAgents": {
+        const agents = state.mcTeamAgents as MCTeamAgent[];
+        await supabase.from("mc_team_agents").upsert(agents.map(mcTeamAgentToRow));
+        break;
+      }
       default:
         // Settings key — upsert the whole settings row
         if (SETTINGS_KEYS.has(key)) {
@@ -302,6 +418,9 @@ async function upsertSlice(key: string, state: AnyState): Promise<void> {
               tradingKillSwitch: state.tradingKillSwitch as boolean,
               opportunityAlertsEnabled: state.opportunityAlertsEnabled as boolean,
               gridOverlayEnabled: state.gridOverlayEnabled as boolean,
+              gridCellSize: state.gridCellSize as number,
+              gridWidth: state.gridWidth as number,
+              gridHeight: state.gridHeight as number,
             }),
           );
         }
