@@ -202,8 +202,8 @@ export function MCSidebar() {
         })}
       </div>
 
-      {/* AURIA status indicator */}
-      <div className="border-t border-white/5 px-3 py-3">
+      {/* Bottom bar: status + collapse toggle */}
+      <div className="border-t border-white/5 px-3 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
             className={`h-2 w-2 shrink-0 rounded-full ${
@@ -216,19 +216,17 @@ export function MCSidebar() {
             </span>
           )}
         </div>
+        <button
+          onClick={toggle}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
-
-      {/* Collapse toggle */}
-      <button
-        onClick={toggle}
-        className="absolute -right-3 top-20 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-bg-surface text-text-muted hover:text-text-primary transition-colors"
-      >
-        {collapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
-      </button>
     </motion.nav>
   );
 }
