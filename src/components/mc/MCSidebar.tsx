@@ -76,8 +76,8 @@ export function MCSidebar() {
     >
       {/* Logo / Brand */}
       <div className={`flex h-14 items-center gap-2 overflow-hidden px-4 ${collapsed ? "justify-center" : ""}`}>
-        <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-[#00ffff]">A</span>
+        <div className="h-6 w-6 shrink-0 rounded-md bg-red-500/20 flex items-center justify-center">
+          <span className="text-[10px] font-bold text-red-500">A</span>
         </div>
         {!collapsed && (
           <>
@@ -119,14 +119,14 @@ export function MCSidebar() {
               onClick={() => setActive(id)}
               className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
                 isActive
-                  ? "bg-[#00ffff]/10 text-[#00ffff]"
+                  ? "bg-red-500/10 text-red-500"
                   : "text-text-muted hover:bg-white/5 hover:text-text-primary"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="mc-active-indicator"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00ffff]"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-red-500"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
@@ -160,14 +160,14 @@ export function MCSidebar() {
               onClick={() => setActive(id)}
               className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
                 isActive
-                  ? "bg-[#00ffff]/10 text-[#00ffff]"
+                  ? "bg-red-500/10 text-red-500"
                   : "text-text-muted hover:bg-white/5 hover:text-text-primary"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="mc-active-indicator"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00ffff]"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-red-500"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

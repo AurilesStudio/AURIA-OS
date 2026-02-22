@@ -300,14 +300,14 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~API actions pour AURIA~~ ✅ Service `taskActions.ts` avec `createTaskAPI()` : CRUD validé (createTask, updateTask, moveTask, deleteTask, assignTask), queries (listTasks, getTask), validation des statuts/priorités (AURI-48)
 
 - ~~Layout principal + Navigation entre modules~~ ✅ MCSidebar + MCHeader + MCLayout + 5 placeholders modules (AURI-42)
-  - **MCSidebar :** Navigation principale (bord gauche, z-10), 6 modules (Office, Tasks, Content, Calendar, Memory, Team), collapsible 56px/200px, icônes Lucide, indicateur actif cyan, statut AURIA (online/offline)
+  - **MCSidebar :** Navigation principale (bord gauche, z-10), 10 modules (Office, Tasks, Content, Calendar, Memory, Team, Monitoring + GitHub, Linear, Notion) + 5 outils (Command, Activity, Tokens, Trading, Settings), collapsible 56px/200px, icônes Lucide, indicateur actif rouge, statut AURIA (online/offline)
   - **MCHeader :** Header 48px avec titre du module actif + badge statut AURIA + nom utilisateur
   - **MCLayout :** Shell layout intégrant sidebar + header + contenu module
   - **MCModuleContent :** Router AnimatePresence entre modules, return null pour Office
   - **Placeholders :** Chaque module non-Office affiche un empty-state centré (icône, titre, compteur d'items du store)
   - **Office mode :** Scène 3D + DashboardOverlay existant (décalé à droite par la sidebar)
   - **Autres modules :** Panneau pleine largeur par-dessus la scène avec overlay dim (bg-base/70)
-  - **CSS :** Variable `--color-mc-accent: #00ffff`, utilitaire `.glow-mc`
+  - **CSS :** Variable `--color-mc-accent: #ef4444` (rouge), utilitaire `.glow-mc`
 
 #### Phase 2 — Calendar Module (AURI-49 → AURI-53) ✅ Complete
 - ~~Modèle de données MCCalendarEvent~~ ✅ Déjà implémenté dans Phase 0 : type `MCCalendarEvent` + CRUD store + sync Supabase `mc_calendar_events` (AURI-49)
