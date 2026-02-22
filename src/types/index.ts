@@ -101,4 +101,6 @@ export type {
   MCMemoryCategory,
   MCTeamAgent,
   MCTeamAgentStatus,
+  MCNotification,
+  MCNotificationType,
 } from "./mission-control";

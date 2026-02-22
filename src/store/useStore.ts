@@ -20,6 +20,7 @@ import type {
   MCContentItem,
   MCMemory,
   MCTeamAgent,
+  MCNotification,
 } from "@/types";
 import {
   ROOM_SIZE,
@@ -485,6 +486,13 @@ interface AuriaStore {
   addMCTeamAgent: (agent: Omit<MCTeamAgent, "id" | "createdAt" | "updatedAt">) => void;
   updateMCTeamAgent: (agentId: string, data: Partial<Omit<MCTeamAgent, "id">>) => void;
   removeMCTeamAgent: (agentId: string) => void;
+
+  mcNotifications: MCNotification[];
+  addMCNotification: (n: Omit<MCNotification, "id" | "createdAt" | "read">) => void;
+  markMCNotificationRead: (id: string) => void;
+  markAllMCNotificationsRead: () => void;
+  removeMCNotification: (id: string) => void;
+  clearMCNotifications: () => void;
 
   // Mission Control navigation
   mcActiveModule: MCModule;
@@ -1389,6 +1397,30 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   removeMCTeamAgent: (agentId) =>
     set((state) => ({ mcTeamAgents: state.mcTeamAgents.filter((a) => a.id !== agentId) })),
 
+  mcNotifications: [],
+  addMCNotification: (n) =>
+    set((state) => ({
+      mcNotifications: [
+        { ...n, id: `notif-${generateId()}`, read: false, createdAt: Date.now() },
+        ...state.mcNotifications,
+      ].slice(0, 100),
+    })),
+  markMCNotificationRead: (id) =>
+    set((state) => ({
+      mcNotifications: state.mcNotifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n,
+      ),
+    })),
+  markAllMCNotificationsRead: () =>
+    set((state) => ({
+      mcNotifications: state.mcNotifications.map((n) => ({ ...n, read: true })),
+    })),
+  removeMCNotification: (id) =>
+    set((state) => ({
+      mcNotifications: state.mcNotifications.filter((n) => n.id !== id),
+    })),
+  clearMCNotifications: () => set({ mcNotifications: [] }),
+
   // ── Mission Control navigation ─────────────────────────────
   mcActiveModule: "office" as MCModule,
   setMCActiveModule: (module) =>
@@ -1453,6 +1485,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     mcContentPipeline: state.mcContentPipeline,
     mcMemories: state.mcMemories,
     mcTeamAgents: state.mcTeamAgents,
+    mcNotifications: state.mcNotifications,
   }),
   merge: (persisted, current) => {
     type SavedAvatar = {
@@ -1490,6 +1523,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       mcContentPipeline?: MCContentItem[];
       mcMemories?: MCMemory[];
       mcTeamAgents?: MCTeamAgent[];
+      mcNotifications?: MCNotification[];
     } | undefined;
     if (!saved) return current;
 
@@ -1566,10 +1600,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const mcContentPipeline = saved.mcContentPipeline ?? current.mcContentPipeline;
     const mcMemories = saved.mcMemories ?? current.mcMemories;
     const mcTeamAgents = saved.mcTeamAgents ?? current.mcTeamAgents;
+    const mcNotifications = saved.mcNotifications ?? current.mcNotifications;
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
+      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
     }
 
     // Build map of default avatars for merging
@@ -1618,7 +1653,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
     const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents };
+    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
   },
 }));
 

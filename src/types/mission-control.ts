@@ -64,6 +64,18 @@ export interface MCMemory {
   createdAt: number;
 }
 
+/** Notification types */
+export type MCNotificationType = "task" | "content" | "error" | "system";
+
+export interface MCNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: MCNotificationType;
+  read: boolean;
+  createdAt: number; // epoch ms
+}
+
 /** Team agent status in Mission Control context */
 export type MCTeamAgentStatus = "active" | "idle" | "offline";
 

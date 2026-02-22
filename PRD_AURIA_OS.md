@@ -337,6 +337,15 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - **Tests** : 10 tests MetricsCollector (counters, ring buffer, avg, reset) + 7 tests route monitoring (system, services, Supabase error, metrics, logs)
 - **Résultat :** 10 fichiers créés, 7 fichiers modifiés, 17 nouveaux tests, 150 tests total tous verts
 
+#### Transversal — Notifications temps réel (AURI-74) ✅ Complete
+- ~~Centre de notifications~~ ✅ NotificationBell dans MCHeader avec badge compteur non lus (mc-accent), toggle panel click-outside-close (AURI-74)
+  - **NotificationPanel :** Overlay-glass dropdown (w-96, max-h-480) avec header (titre + Mark all read + Clear), filter pills (All/Task/Content/Error/System), liste scrollable, empty state
+  - **NotificationItem :** Icône type colorée (task=cyan CheckSquare, content=indigo FileText, error=red AlertCircle, system=amber Info) + titre + message + time ago + dot non lu, bg-white/5 si unread
+- ~~Store Zustand~~ ✅ Slice `mcNotifications` : 5 actions (add, markRead, markAllRead, remove, clear), prepend newest-first, cap 100, persisté localStorage (AURI-74)
+- ~~Agent API~~ ✅ Service `notificationActions.ts` avec `createNotificationAPI()` : notify (validation title/type), dismiss (validation id), markRead, markAllRead, listNotifications (filtres type/unreadOnly), getUnreadCount (AURI-74)
+- ~~Tests~~ ✅ 16 tests notificationActions (notify validation, dismiss, markRead, markAllRead, listNotifications filtres, getUnreadCount)
+- **Résultat :** 5 fichiers créés, 4 fichiers modifiés, 16 nouveaux tests, 166 tests total tous verts
+
 #### Transversal — Tests unitaires et d'intégration (AURI-75) ✅ Complete
 - ~~Infrastructure Vitest~~ ✅ Setup Vitest (devDep) + `vitest.config.ts` (globals, node env, alias `@`) + scripts `npm test` / `npm run test:coverage` (AURI-75)
 - ~~Tests middleware serveur~~ ✅ 8 tests — auth (401 sans header, 403 token invalide, 500 GATEWAY_TOKEN absent, skip health, pass valide) + rate limit (X-RateLimit-* headers, 429 après dépassement, décrémentation remaining) (AURI-75)
@@ -361,3 +370,4 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 8. ~~API Bridge Hono + Deployment Config~~ ✅ — Serveur API sur port 3001, PM2/Nginx/CI configs.
 9. ~~Tests unitaires et d'intégration~~ ✅ — Vitest, 133 tests (middleware + routes + 5 action APIs), CI intégré.
 10. ~~Monitoring Dashboard~~ ✅ — 7e module MC, MetricsCollector + route monitoring + 5 sous-composants, 150 tests total.
+11. ~~Notifications temps réel~~ ✅ — Centre de notifications MCHeader, store slice, agent API, 166 tests total.
