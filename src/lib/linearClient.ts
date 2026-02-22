@@ -1,8 +1,11 @@
 import type { MCTaskStatus, MCTaskPriority } from "@/types/mission-control";
+import { useStore } from "@/store/useStore";
 
 const LINEAR_API = "https://api.linear.app/graphql";
 
 function getApiKey(): string {
+  const storeKey = useStore.getState().integrationKeys.linear;
+  if (storeKey) return storeKey;
   return import.meta.env.VITE_LINEAR_API_KEY ?? "";
 }
 
@@ -56,6 +59,28 @@ export interface LinearTeam {
   name: string;
 }
 
+export interface LinearProject {
+  id: string;
+  name: string;
+  description: string;
+  state: string;
+  progress: number;
+  startDate: string | null;
+  targetDate: string | null;
+  teams: { nodes: { id: string; name: string }[] };
+}
+
+export interface LinearCycle {
+  id: string;
+  number: number;
+  name: string | null;
+  startsAt: string;
+  endsAt: string;
+  progress: number;
+  completedScopeCount: number;
+  scopeCount: number;
+}
+
 export async function fetchLinearTeams(): Promise<LinearTeam[]> {
   const res = await gql(TEAMS_QUERY);
   return res.teams.nodes;
@@ -94,6 +119,78 @@ const PRIORITY_MAP: Record<number, MCTaskPriority> = {
 
 export function mapLinearPriority(priority: number): MCTaskPriority {
   return PRIORITY_MAP[priority] ?? "none";
+}
+
+// ── Projects & Cycles ────────────────────────────────────────
+
+const PROJECTS_QUERY = `
+  query {
+    projects(first: 50) {
+      nodes {
+        id name description state progress
+        startDate targetDate
+        teams { nodes { id name } }
+      }
+    }
+  }
+`;
+
+const CYCLES_QUERY = `
+  query Cycles($teamId: String!) {
+    team(id: $teamId) {
+      cycles(first: 20, orderBy: createdAt) {
+        nodes {
+          id number name startsAt endsAt
+          progress completedScopeCount scopeCount
+        }
+      }
+    }
+  }
+`;
+
+const CREATE_ISSUE_MUTATION = `
+  mutation CreateIssue($input: IssueCreateInput!) {
+    issueCreate(input: $input) {
+      issue { id identifier title }
+    }
+  }
+`;
+
+const UPDATE_ISSUE_MUTATION = `
+  mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+    issueUpdate(id: $id, input: $input) {
+      issue { id identifier title }
+    }
+  }
+`;
+
+export async function fetchLinearProjects(): Promise<LinearProject[]> {
+  const res = await gql(PROJECTS_QUERY);
+  return res.projects.nodes;
+}
+
+export async function fetchLinearCycles(teamId: string): Promise<LinearCycle[]> {
+  const res = await gql(CYCLES_QUERY, { teamId });
+  return res.team.cycles.nodes;
+}
+
+export async function createLinearIssue(input: {
+  title: string;
+  description?: string;
+  teamId: string;
+  priority?: number;
+  stateId?: string;
+}): Promise<{ id: string; identifier: string; title: string }> {
+  const res = await gql(CREATE_ISSUE_MUTATION, { input });
+  return res.issueCreate.issue;
+}
+
+export async function updateLinearIssue(
+  id: string,
+  input: { title?: string; description?: string; priority?: number; stateId?: string },
+): Promise<{ id: string; identifier: string; title: string }> {
+  const res = await gql(UPDATE_ISSUE_MUTATION, { id, input });
+  return res.issueUpdate.issue;
 }
 
 // ── GraphQL helper ───────────────────────────────────────────

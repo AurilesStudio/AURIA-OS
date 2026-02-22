@@ -6,6 +6,9 @@ import { MCCalendarModule } from "./modules/MCCalendarModule";
 import { MCMemoryModule } from "./modules/MCMemoryModule";
 import { MCTeamModule } from "./modules/MCTeamModule";
 import { MCMonitoringModule } from "./modules/MCMonitoringModule";
+import { MCGithubModule } from "./modules/MCGithubModule";
+import { MCLinearModule } from "./modules/MCLinearModule";
+import { MCNotionModule } from "./modules/MCNotionModule";
 
 const moduleComponents = {
   tasks: MCTasksModule,
@@ -14,6 +17,9 @@ const moduleComponents = {
   memory: MCMemoryModule,
   team: MCTeamModule,
   monitoring: MCMonitoringModule,
+  github: MCGithubModule,
+  linear: MCLinearModule,
+  notion: MCNotionModule,
 } as const;
 
 export function MCModuleContent() {

@@ -368,6 +368,10 @@ interface AuriaStore {
   setLocalLlmEndpoint: (url: string) => void;
   setLocalLlmModel: (model: string) => void;
 
+  // Integration keys (GitHub, Linear, Notion)
+  integrationKeys: Record<string, string>;
+  setIntegrationKey: (service: string, key: string) => void;
+
   // Tripo3D
   tripoApiKey: string;
   setTripoApiKey: (key: string) => void;
@@ -764,6 +768,11 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
         ),
       };
     }),
+
+  // ── Integration keys ──────────────────────────────────────
+  integrationKeys: {},
+  setIntegrationKey: (service, key) =>
+    set((state) => ({ integrationKeys: { ...state.integrationKeys, [service]: key } })),
 
   // ── Tripo3D ────────────────────────────────────────────────
   // ── LLM API Keys ──────────────────────────────────────────
@@ -1448,6 +1457,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   name: "auria-store",
   partialize: (state) => ({
     gauges: state.gauges,
+    integrationKeys: state.integrationKeys,
     llmApiKeys: state.llmApiKeys,
     localLlmEndpoint: state.localLlmEndpoint,
     localLlmModel: state.localLlmModel,
@@ -1500,6 +1510,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     };
     const saved = persisted as {
       gauges?: TokenGaugeData[];
+      integrationKeys?: Record<string, string>;
       llmApiKeys?: Record<string, string>;
       localLlmEndpoint?: string;
       localLlmModel?: string;
@@ -1532,6 +1543,9 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
       ? saved.gauges.map((g) => ({ ...g, cost: g.cost ?? 0 }))
       : current.gauges;
 
+    const integrationKeys = saved.integrationKeys
+      ? { ...current.integrationKeys, ...saved.integrationKeys }
+      : current.integrationKeys;
     const llmApiKeys = saved.llmApiKeys
       ? { ...current.llmApiKeys, ...saved.llmApiKeys }
       : current.llmApiKeys;
@@ -1604,7 +1618,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
 
     // If no saved avatars key at all (first ever load), use defaults
     if (!saved.avatars) {
-      return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
+      return { ...current, gauges, integrationKeys, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
     }
 
     // Build map of default avatars for merging
@@ -1653,7 +1667,7 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
     const missingSystemAvatars = systemAvatarDefaults.filter((d) => !restoredIds.has(d.id));
     const avatars: AvatarData[] = [...restoredAvatars, ...missingSystemAvatars];
 
-    return { ...current, gauges, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
+    return { ...current, gauges, integrationKeys, llmApiKeys, localLlmEndpoint, localLlmModel, tripoApiKey, appearances, rooms, roles, avatars, workspaceProjects, activeProjectId, teamTemplates, tradingKillSwitch, opportunityAlertsEnabled, gridOverlayEnabled, gridCellSize, gridWidth, gridHeight, mcSidebarCollapsed, mcTasks, mcCalendarEvents, mcContentPipeline, mcMemories, mcTeamAgents, mcNotifications };
   },
 }));
 
@@ -1722,6 +1736,7 @@ if (isSupabaseEnabled()) {
           mcContentPipeline: s.mcContentPipeline,
           mcMemories: s.mcMemories,
           mcTeamAgents: s.mcTeamAgents,
+          integrationKeys: s.integrationKeys,
           llmApiKeys: s.llmApiKeys,
           localLlmEndpoint: s.localLlmEndpoint,
           localLlmModel: s.localLlmModel,

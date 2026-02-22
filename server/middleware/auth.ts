@@ -2,7 +2,7 @@ import type { MiddlewareHandler } from "hono";
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   // Skip auth for health endpoint
-  if (c.req.path === "/api/health") {
+  if (c.req.path === "/api/health" || c.req.path.startsWith("/api/proxy/notion")) {
     return next();
   }
 

@@ -7,6 +7,9 @@ import {
   Brain,
   Users,
   Activity,
+  Github,
+  BarChart2,
+  StickyNote,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -21,6 +24,12 @@ const modules: { id: MCModule; icon: typeof Building2; label: string }[] = [
   { id: "memory", icon: Brain, label: "Memory" },
   { id: "team", icon: Users, label: "Team" },
   { id: "monitoring", icon: Activity, label: "Monitoring" },
+];
+
+const integrationModules: { id: MCModule; icon: typeof Building2; label: string }[] = [
+  { id: "github", icon: Github, label: "GitHub" },
+  { id: "linear", icon: BarChart2, label: "Linear" },
+  { id: "notion", icon: StickyNote, label: "Notion" },
 ];
 
 export function MCSidebar() {
@@ -70,7 +79,47 @@ export function MCSidebar() {
                   : "text-text-muted hover:bg-white/5 hover:text-text-primary"
               }`}
             >
-              {/* Active indicator bar */}
+              {isActive && (
+                <motion.div
+                  layoutId="mc-active-indicator"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00ffff]"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+              <Icon className="h-4 w-4 shrink-0" />
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs font-medium whitespace-nowrap"
+                >
+                  {label}
+                </motion.span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Integrations separator */}
+        <div className="my-2 border-t border-white/5" />
+        {!collapsed && (
+          <span className="px-3 pb-1 text-[10px] uppercase tracking-wider text-text-muted/50">
+            Integrations
+          </span>
+        )}
+
+        {integrationModules.map(({ id, icon: Icon, label }) => {
+          const isActive = activeModule === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setActive(id)}
+              className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
+                isActive
+                  ? "bg-[#00ffff]/10 text-[#00ffff]"
+                  : "text-text-muted hover:bg-white/5 hover:text-text-primary"
+              }`}
+            >
               {isActive && (
                 <motion.div
                   layoutId="mc-active-indicator"

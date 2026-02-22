@@ -10,6 +10,9 @@ const MODULE_TITLES: Record<MCModule, string> = {
   memory: "Memory",
   team: "Team",
   monitoring: "Monitoring",
+  github: "GitHub",
+  linear: "Linear",
+  notion: "Notion",
 };
 
 export function MCHeader() {

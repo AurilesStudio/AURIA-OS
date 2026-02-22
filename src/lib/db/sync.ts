@@ -204,6 +204,7 @@ interface SeedableState {
   mcContentPipeline: MCContentItem[];
   mcMemories: MCMemory[];
   mcTeamAgents: MCTeamAgent[];
+  integrationKeys: Record<string, string>;
   llmApiKeys: Record<string, string>;
   localLlmEndpoint: string;
   localLlmModel: string;

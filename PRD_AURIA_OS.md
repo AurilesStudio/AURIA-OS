@@ -83,9 +83,10 @@ AURIA est l'orchestrateur du système. Ce n'est pas un avatar classique :
 - **Reset tracking :** Possibilité de remettre les compteurs à zéro.
 
 ### 4.10. Intégration Écosystème
-- **Linear Sync :** Affichage des tickets urgents.
-- **Notion Bridge :** Exportation du contexte en cas de saturation de tokens.
-- **GitHub Monitor :** Statut des PRs et déploiements.
+- **GitHub Dashboard :** Connexion directe à l'API REST GitHub (CORS supporté). Repos, Issues, Pull Requests, Commits. Création d'issues depuis MC.
+- **Linear Dashboard :** Connexion directe à l'API GraphQL Linear (CORS supporté). Issues, Projets, Cycles. Création d'issues depuis MC.
+- **Notion Dashboard :** Connexion via proxy serveur (CORS bloqué par Notion). Recherche, Pages, Databases, query view table. Création de pages depuis MC.
+- **Tokens d'intégration :** Stockés dans `integrationKeys` (Zustand persisté). Configurables dans Settings → Integrations.
 
 ## 5. Design & UX
 - **Vibe :** Dark Mode, Neon Cyan (#00ffcc), Typographie Monospace.
@@ -175,6 +176,42 @@ Le projet "Gestion de projets" (project-4) utilise un layout identique au Tradin
 | Github | `room-github` | Bleu (#58a6ff) | GIT | Structure de branches — sphère centrale + 3 branches |
 | Notion | `room-notion` | Gris clair (#e0e0e0) | WIKI | Pile de 3 pages flottantes empilées |
 | Linear | `room-linear` | Indigo (#818cf8) | TASKS | 3 colonnes Kanban de cubes empilés (3-2-1) |
+
+#### Dashboards Mission Control (AURI-76 → AURI-78) ✅ Complete
+Les 3 agents du projet Gestion de projets sont connectés aux APIs réelles via des tokens configurés dans Settings → Integrations.
+
+##### Store & Configuration
+- **`integrationKeys`** : `Record<string, string>` dans le store Zustand (persisté localStorage + Supabase sync).
+- **Settings UI** : Section "Integrations" dans ApiKeysSettings — 3 champs password (GitHub `ghp_...`, Linear `lin_api_...`, Notion `ntn_...`) avec eye toggle et "Connected" indicator.
+- **Data fetching** : `useState` local dans chaque module (pattern MCMonitoringModule), pas de Zustand pour les données distantes.
+
+##### Module GitHub (`MCGithubModule`)
+- **Client** : `src/lib/githubClient.ts` — REST API directe (`api.github.com`), Bearer token, types `GHUser/GHRepo/GHIssue/GHPullRequest/GHCommit`.
+- **Fonctionnalités** : Liste repos (grid 2 cols, language dot, stars, issues count), drill-down avec onglets Issues/PRs/Commits, création d'issues via modal.
+- **Sous-composants (6)** : `GithubHeader`, `GithubRepoList`, `GithubIssueList`, `GithubPRList`, `GithubCommitList`, `GithubIssueModal`.
+- **Accent** : `#58a6ff` (bleu GitHub).
+
+##### Module Linear (`MCLinearModule`)
+- **Client** : `src/lib/linearClient.ts` (étendu) — GraphQL API directe, token store-first puis fallback env var.
+- **Fonctionnalités** : Team selector dropdown, onglets Issues/Projects/Cycles, progress bars, priority/state dots, création d'issues via modal.
+- **Sous-composants (5)** : `LinearHeader`, `LinearIssueList`, `LinearProjectList`, `LinearCycleList`, `LinearIssueModal`.
+- **Accent** : `#818cf8` (indigo Linear).
+
+##### Module Notion (`MCNotionModule`)
+- **Client** : `src/lib/notionClient.ts` — via proxy serveur (`/api/proxy/notion`) car CORS bloqué par Notion.
+- **Proxy** : `server/routes/notionProxy.ts` — route Hono catch-all, forward `X-Notion-Token` → `Authorization: Bearer`, `Notion-Version: 2022-06-28`. Auth middleware skippé (le token Notion fait office d'auth).
+- **Fonctionnalités** : Recherche globale (submit on Enter), onglets Pages/Databases, drill-down database → table view (pagination cursor), création de pages via modal.
+- **Sous-composants (5)** : `NotionHeader`, `NotionPageList`, `NotionDatabaseList`, `NotionDBView`, `NotionPageModal`.
+- **Accent** : `#e0e0e0` (neutre Notion).
+
+##### Sidebar & Routage
+- **MCSidebar** : 3 nouvelles entrées sous séparateur "Integrations" (GitHub, Linear, Notion).
+- **MCModuleContent** : 3 composants enregistrés dans `moduleComponents`.
+- **MCModule type** : étendu avec `"github" | "linear" | "notion"`.
+
+##### Inventaire
+- **20 fichiers créés** : 2 clients API + 1 proxy serveur + 3 modules MC + 6 sous-composants GitHub + 5 sous-composants Linear + 5 sous-composants Notion.
+- **8 fichiers modifiés** : types, store, sync, linearClient, settings, sidebar, router, server (index + auth).
 
 ### 4.13. Persistance & Stockage
 - **Architecture hybride :** `localStorage` (cache instantané) + **Supabase Cloud** (PostgreSQL) pour la persistance durable et le multi-device.
@@ -311,6 +348,17 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Workstations 3D~~ ✅ Desk (box geometry) + monitor (emissive color agent, intensité 0.15→0.4 quand working) + stand, 6 positions par room en arc, AURIA exclue (superviseur cross-room) (AURI-69)
 - ~~Comportement lié au statut~~ ✅ working=immobile au bureau (Happy Idle), idle=patrouille (Walking), success/error=sur place (Happy Idle), patrol guard empêche mouvement pendant working/success/error (AURI-69)
 
+#### Phase 7 — Integration Dashboards GitHub / Linear / Notion (AURI-76 → AURI-78) ✅ Complete
+- ~~Store & tokens~~ ✅ `integrationKeys: Record<string, string>` dans Zustand (persisté localStorage + Supabase sync), `setIntegrationKey` action, partialize + merge + seedIfEmpty mis à jour (AURI-76)
+- ~~Settings UI~~ ✅ Section "Integrations" dans ApiKeysSettings — 3 champs (GitHub/Linear/Notion) avec password toggle et "Connected" indicator (AURI-76)
+- ~~Clients API~~ ✅ `githubClient.ts` (REST direct, 8 fonctions), `linearClient.ts` étendu (store-first token + projets/cycles/mutations), `notionClient.ts` (via proxy, 6 fonctions) (AURI-77)
+- ~~Proxy Notion~~ ✅ `server/routes/notionProxy.ts` (Hono catch-all, forward X-Notion-Token → Bearer, Notion-Version 2022-06-28), auth skip dans middleware (AURI-77)
+- ~~Sidebar & routeur~~ ✅ 3 entrées "Integrations" dans MCSidebar, 3 composants dans MCModuleContent, MCModule type étendu (AURI-76)
+- ~~Module GitHub~~ ✅ MCGithubModule + 6 sous-composants (Header, RepoList, IssueList, PRList, CommitList, IssueModal), accent #58a6ff (AURI-76)
+- ~~Module Linear~~ ✅ MCLinearModule + 5 sous-composants (Header, IssueList, ProjectList, CycleList, IssueModal), accent #818cf8 (AURI-77)
+- ~~Module Notion~~ ✅ MCNotionModule + 5 sous-composants (Header, PageList, DatabaseList, DBView, PageModal), accent #e0e0e0 (AURI-78)
+- **Résultat :** 20 fichiers créés, 8 fichiers modifiés, 0 nouvelles erreurs TypeScript
+
 #### Transversal — API Bridge + Deployment Config (AURI-73, AURI-71) ✅ Complete
 - ~~API Bridge (serveur Hono)~~ ✅ Serveur Hono sur port 3001 avec 5 routes CRUD (`/api/mc/tasks`, `/api/mc/calendar`, `/api/mc/content`, `/api/mc/memories`, `/api/mc/team`) + health check, auth Bearer token (`GATEWAY_TOKEN`), rate limiting (100 req/min/IP), audit logger (AURI-73)
   - **Stack :** Hono 4.12 + @hono/node-server + tsx
@@ -362,7 +410,7 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 ## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
-3. Linear / Notion / GitHub sync temps réel.
+3. ~~Linear / Notion / GitHub sync temps réel.~~ ✅ Dashboards complets (lecture + écriture) pour GitHub, Linear et Notion dans Mission Control.
 4. ~~Persistance serveur (Supabase) en remplacement du localStorage.~~ ✅ Supabase Cloud intégré (8 tables, sync bidirectionnelle, graceful degradation).
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
@@ -371,3 +419,4 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 9. ~~Tests unitaires et d'intégration~~ ✅ — Vitest, 133 tests (middleware + routes + 5 action APIs), CI intégré.
 10. ~~Monitoring Dashboard~~ ✅ — 7e module MC, MetricsCollector + route monitoring + 5 sous-composants, 150 tests total.
 11. ~~Notifications temps réel~~ ✅ — Centre de notifications MCHeader, store slice, agent API, 166 tests total.
+12. ~~Integration Dashboards GitHub / Linear / Notion~~ ✅ — 3 modules MC complets (lecture + écriture), proxy Notion, tokens dans Settings, 20 fichiers créés.
