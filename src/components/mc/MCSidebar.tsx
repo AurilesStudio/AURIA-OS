@@ -74,7 +74,7 @@ export function MCSidebar() {
       animate={{ width: collapsed ? 56 : 200 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
     >
-      {/* Logo / Brand */}
+      {/* Logo / Brand + Collapse toggle */}
       <div className="flex h-14 items-center gap-2 overflow-hidden px-4">
         <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
           <span className="text-[10px] font-bold text-[#00ffff]">A</span>
@@ -84,11 +84,21 @@ export function MCSidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
+            className="flex-1 text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
           >
             AURIA-OS
           </motion.span>
         )}
+        <button
+          onClick={toggle}
+          className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
 
       {/* Module buttons */}
@@ -202,8 +212,8 @@ export function MCSidebar() {
         })}
       </div>
 
-      {/* Bottom bar: status + collapse toggle */}
-      <div className="border-t border-white/5 px-3 py-3 flex items-center justify-between">
+      {/* AURIA status indicator */}
+      <div className="border-t border-white/5 px-3 py-3">
         <div className="flex items-center gap-2">
           <div
             className={`h-2 w-2 shrink-0 rounded-full ${
@@ -216,16 +226,6 @@ export function MCSidebar() {
             </span>
           )}
         </div>
-        <button
-          onClick={toggle}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronLeft className="h-3.5 w-3.5" />
-          )}
-        </button>
       </div>
     </motion.nav>
   );
