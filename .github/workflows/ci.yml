@@ -27,3 +27,6 @@ jobs:
 
       - name: Type check (server)
         run: npx tsc --noEmit -p server/tsconfig.json
+
+      - name: Test
+        run: npm test

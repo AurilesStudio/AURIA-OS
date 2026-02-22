@@ -321,6 +321,19 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Deployment config~~ ✅ PM2 (`ecosystem.config.cjs`), Nginx reverse proxy (`deploy/nginx.conf` : SPA + /api/* proxy), GitHub Actions CI (`.github/workflows/ci.yml` : lint + tsc frontend + tsc server) (AURI-71)
   - **Pas de déploiement réel** — configs prêtes pour VPS futur
 
+#### Transversal — Tests unitaires et d'intégration (AURI-75) ✅ Complete
+- ~~Infrastructure Vitest~~ ✅ Setup Vitest (devDep) + `vitest.config.ts` (globals, node env, alias `@`) + scripts `npm test` / `npm run test:coverage` (AURI-75)
+- ~~Tests middleware serveur~~ ✅ 8 tests — auth (401 sans header, 403 token invalide, 500 GATEWAY_TOKEN absent, skip health, pass valide) + rate limit (X-RateLimit-* headers, 429 après dépassement, décrémentation remaining) (AURI-75)
+- ~~Tests routes serveur~~ ✅ 36 tests — Health + 5 modules CRUD (tasks, calendar, content, memories, team) : validation inputs requis, enums, codes HTTP (400/201/200), Supabase mocké (chainable) (AURI-75)
+- ~~Tests agent action APIs~~ ✅ 89 tests — 5 fichiers de fonctions pures avec store Zustand mocké (vi.fn()) (AURI-75)
+  - `taskActions` (22 tests) : createTask, updateTask, moveTask, deleteTask, listTasks, getTask, assignTask
+  - `calendarActions` (17 tests) : createEvent, updateEvent, markExecuted, deleteEvent, listEvents, getUpcoming
+  - `contentActions` (15 tests) : createContent, updateContent, moveStage, deleteContent, listContent, getScheduled
+  - `memoryActions` (17 tests) : createMemory, updateMemory, deleteMemory, listMemories, searchMemories, getRecent
+  - `teamActions` (18 tests) : createAgent, updateAgent, setStatus, logTask, deleteAgent, listAgents, getActiveAgents
+- ~~CI intégration~~ ✅ Step `npm test` ajouté dans `.github/workflows/ci.yml` après les type checks (AURI-75)
+- **Résultat :** 7 fichiers de test, 133 tests, tous verts (~191ms)
+
 ## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
@@ -330,3 +343,4 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
 7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team~~ ✅ — Tous les 5 modules implémentés.
 8. ~~API Bridge Hono + Deployment Config~~ ✅ — Serveur API sur port 3001, PM2/Nginx/CI configs.
+9. ~~Tests unitaires et d'intégration~~ ✅ — Vitest, 133 tests (middleware + routes + 5 action APIs), CI intégré.
