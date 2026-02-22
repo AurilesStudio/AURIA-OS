@@ -75,23 +75,25 @@ export function MCSidebar() {
       transition={{ duration: 0.2, ease: "easeInOut" }}
     >
       {/* Logo / Brand + Collapse toggle */}
-      <div className="flex h-14 items-center gap-2 overflow-hidden px-4">
-        <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-[#00ffff]">A</span>
+      <div className="flex h-14 items-center justify-between px-2">
+        <div className="flex items-center gap-2 min-w-0 px-2">
+          <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-[#00ffff]">A</span>
+          </div>
+          {!collapsed && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
+            >
+              AURIA-OS
+            </motion.span>
+          )}
         </div>
-        {!collapsed && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
-          >
-            AURIA-OS
-          </motion.span>
-        )}
         <button
           onClick={toggle}
-          className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
         >
           {collapsed ? (
             <ChevronRight className="h-3.5 w-3.5" />
