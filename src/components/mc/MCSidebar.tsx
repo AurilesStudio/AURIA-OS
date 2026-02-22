@@ -74,34 +74,40 @@ export function MCSidebar() {
       animate={{ width: collapsed ? 56 : 200 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
     >
-      {/* Logo / Brand + Collapse toggle */}
-      <div className="flex h-14 items-center justify-between px-2">
-        <div className="flex items-center gap-2 min-w-0 px-2">
-          <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-[#00ffff]">A</span>
-          </div>
-          {!collapsed && (
+      {/* Logo / Brand */}
+      <div className={`flex h-14 items-center gap-2 overflow-hidden px-4 ${collapsed ? "justify-center" : ""}`}>
+        <div className="h-6 w-6 shrink-0 rounded-md bg-[#00ffff]/20 flex items-center justify-center">
+          <span className="text-[10px] font-bold text-[#00ffff]">A</span>
+        </div>
+        {!collapsed && (
+          <>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
+              className="flex-1 text-xs font-semibold uppercase tracking-wider text-text-primary whitespace-nowrap"
             >
               AURIA-OS
             </motion.span>
-          )}
-        </div>
+            <button
+              onClick={toggle}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Expand button when collapsed — below logo */}
+      {collapsed && (
         <button
           onClick={toggle}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+          className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-md text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
         >
-          {collapsed ? (
-            <ChevronRight className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronLeft className="h-3.5 w-3.5" />
-          )}
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
-      </div>
+      )}
 
       {/* Module buttons */}
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-2">
