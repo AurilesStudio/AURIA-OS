@@ -304,6 +304,12 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - **TeamHeader :** Compteur + barre de recherche (name+role+responsibilities) + filtres statut (pills All/Active/Idle/Offline) + bouton "+ New Agent" (mc-accent)
 - ~~API actions pour AURIA~~ ✅ Service `teamActions.ts` avec `createTeamAPI()` : CRUD validé (createAgent, updateAgent, setStatus, logTask, deleteAgent), queries (listAgents, getActiveAgents, getAgent), validation statuts
 
+#### Phase 6 — Office v2: Multi-agent workspace + Three.js (AURI-69 → AURI-70) ✅ Complete
+- ~~Three.js 3D avatars~~ ✅ GLB loading via useGLTF, AnimationMixer avec FBX retargeting (idle/walking/running), scène isométrique, éclairage, orbit controls, responsive (AURI-70)
+- ~~Status bubble~~ ✅ StatusBubble (drei Html) au-dessus de chaque agent : dot animé (working=vert pulse, idle=amber, success=vert, error=rouge) + texte tâche en cours tronqué, glass overlay bg-black/60, pointer-events-none, masqué en FPV (AURI-69)
+- ~~Workstations 3D~~ ✅ Desk (box geometry) + monitor (emissive color agent, intensité 0.15→0.4 quand working) + stand, 6 positions par room en arc, AURIA exclue (superviseur cross-room) (AURI-69)
+- ~~Comportement lié au statut~~ ✅ working=immobile au bureau (Happy Idle), idle=patrouille (Walking), success/error=sur place (Happy Idle), patrol guard empêche mouvement pendant working/success/error (AURI-69)
+
 ## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.

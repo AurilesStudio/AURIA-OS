@@ -14,6 +14,7 @@ import { avatarWorldPositions } from "@/lib/avatarPositions";
 import { auriaFpvDirection } from "@/lib/auriaFpvDirection";
 import { AvatarGlow } from "./AvatarGlow";
 import { AvatarLabel } from "./AvatarLabel";
+import { StatusBubble } from "./StatusBubble";
 import {
   buildBoneMap,
   retargetClip,
@@ -33,6 +34,8 @@ const CROSS_ROOM_PAUSE = 1.5; // seconds AURIA pauses in each room before moving
 
 interface AvatarModelProps {
   avatar: AvatarData;
+  deskPosition?: [number, number, number];
+  deskRotation?: number;
   onDragStart?: (avatarId: string, e: ThreeEvent<PointerEvent>) => void;
 }
 
@@ -271,7 +274,7 @@ function ProceduralAvatar({
 }
 
 // ── Main avatar component ───────────────────────────────────
-export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
+export function AvatarModel({ avatar, deskPosition, deskRotation, onDragStart }: AvatarModelProps) {
   const groupRef = useRef<Group>(null);
   const selectedAvatarId = useStore((s) => s.selectedAvatarId);
   const rooms = useStore((s) => s.rooms);
@@ -371,6 +374,31 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
     prevFpv.current = fpvActive;
   }, [fpvActive, isAuria, avatar.id, setAvatarActiveClipStore]);
 
+  // ── Status-based behavior: working → desk, idle → patrol ────
+  const prevStatus = useRef(avatar.status);
+  useEffect(() => {
+    if (prevStatus.current === avatar.status) return;
+    prevStatus.current = avatar.status;
+    if (isAuria) return; // AURIA has no desk
+
+    if (avatar.status === "working" && deskPosition && groupRef.current) {
+      // Move to desk, switch to idle animation
+      groupRef.current.position.set(deskPosition[0], deskPosition[1], deskPosition[2]);
+      updateAvatarPosition(avatar.id, deskPosition);
+      if (deskRotation != null) {
+        groupRef.current.rotation.y = deskRotation;
+      }
+      setAvatarActiveClipStore(avatar.id, "Happy Idle");
+    } else if (avatar.status === "idle") {
+      // Resume patrol
+      patrol.current.needsNewTarget = true;
+      setAvatarActiveClipStore(avatar.id, "Walking");
+    } else if (avatar.status === "success" || avatar.status === "error") {
+      // Stay in place, idle animation
+      setAvatarActiveClipStore(avatar.id, "Happy Idle");
+    }
+  }, [avatar.status, avatar.id, isAuria, deskPosition, deskRotation, updateAvatarPosition, setAvatarActiveClipStore]);
+
   // Get room bounds for patrol
   const room = rooms.find((r) => r.id === avatar.roomId);
 
@@ -455,7 +483,8 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
       return;
     }
 
-    if (!isWalking) return;
+    // Skip patrol if not walking or if working/success/error (parked at desk)
+    if (!isWalking || avatar.status === "working" || avatar.status === "success" || avatar.status === "error") return;
 
     // Throttled sync of visual position → store (so all UI reads accurate pos)
     syncTimer.current += delta;
@@ -557,6 +586,7 @@ export function AvatarModel({ avatar, onDragStart }: AvatarModelProps) {
         {!hiddenInFpv && (
           <>
             <AvatarLabel name={avatar.name} color={avatar.color} status={avatar.status} role={roles.find((r) => r.id === avatar.roleId)?.name} level={avatar.level} availability={avatar.availability} />
+            <StatusBubble status={avatar.status} currentAction={avatar.currentAction} hidden={hiddenInFpv} />
             <AvatarGlow visible={isSelected} status={avatar.status} />
           </>
         )}
