@@ -310,6 +310,17 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Workstations 3D~~ ✅ Desk (box geometry) + monitor (emissive color agent, intensité 0.15→0.4 quand working) + stand, 6 positions par room en arc, AURIA exclue (superviseur cross-room) (AURI-69)
 - ~~Comportement lié au statut~~ ✅ working=immobile au bureau (Happy Idle), idle=patrouille (Walking), success/error=sur place (Happy Idle), patrol guard empêche mouvement pendant working/success/error (AURI-69)
 
+#### Transversal — API Bridge + Deployment Config (AURI-73, AURI-71) ✅ Complete
+- ~~API Bridge (serveur Hono)~~ ✅ Serveur Hono sur port 3001 avec 5 routes CRUD (`/api/mc/tasks`, `/api/mc/calendar`, `/api/mc/content`, `/api/mc/memories`, `/api/mc/team`) + health check, auth Bearer token (`GATEWAY_TOKEN`), rate limiting (100 req/min/IP), audit logger (AURI-73)
+  - **Stack :** Hono 4.12 + @hono/node-server + tsx
+  - **Middleware :** auth.ts (401/403, health exempt), rateLimit.ts (in-memory, X-RateLimit-* headers), logger.ts (structured console)
+  - **Routes :** REST CRUD standard (GET list, GET :id, POST, PATCH :id, DELETE :id) pour chaque module, validation des champs requis et enums
+  - **Supabase :** Client server-side avec service role key (`server/lib/supabase.ts`)
+  - **Config :** `server/tsconfig.json` (ES2022, Node target)
+  - **Scripts :** `npm run server:dev` (tsx watch), `npm run server:start` (tsx)
+- ~~Deployment config~~ ✅ PM2 (`ecosystem.config.cjs`), Nginx reverse proxy (`deploy/nginx.conf` : SPA + /api/* proxy), GitHub Actions CI (`.github/workflows/ci.yml` : lint + tsc frontend + tsc server) (AURI-71)
+  - **Pas de déploiement réel** — configs prêtes pour VPS futur
+
 ## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
 2. Validation AURIA avec feedback loop sur le leveling.
@@ -318,3 +329,4 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 5. Mode mobile (Telegram bridge).
 6. Trading Room : connexion Binance WebSocket, stratégies réelles, exécution d'ordres, historique trades.
 7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team~~ ✅ — Tous les 5 modules implémentés.
+8. ~~API Bridge Hono + Deployment Config~~ ✅ — Serveur API sur port 3001, PM2/Nginx/CI configs.
