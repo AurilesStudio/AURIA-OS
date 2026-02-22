@@ -8,6 +8,7 @@ const MODULE_TITLES: Record<MCModule, string> = {
   calendar: "Calendar",
   memory: "Memory",
   team: "Team",
+  monitoring: "Monitoring",
 };
 
 export function MCHeader() {

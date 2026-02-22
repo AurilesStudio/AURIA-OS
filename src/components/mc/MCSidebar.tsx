@@ -6,6 +6,7 @@ import {
   Calendar,
   Brain,
   Users,
+  Activity,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const modules: { id: MCModule; icon: typeof Building2; label: string }[] = [
   { id: "calendar", icon: Calendar, label: "Calendar" },
   { id: "memory", icon: Brain, label: "Memory" },
   { id: "team", icon: Users, label: "Team" },
+  { id: "monitoring", icon: Activity, label: "Monitoring" },
 ];
 
 export function MCSidebar() {

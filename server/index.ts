@@ -12,6 +12,7 @@ import calendar from "./routes/calendar.js";
 import content from "./routes/content.js";
 import memories from "./routes/memories.js";
 import team from "./routes/team.js";
+import monitoring from "./routes/monitoring.js";
 
 const app = new Hono();
 
@@ -28,6 +29,7 @@ app.route("/api/mc/calendar", calendar);
 app.route("/api/mc/content", content);
 app.route("/api/mc/memories", memories);
 app.route("/api/mc/team", team);
+app.route("/api/monitoring", monitoring);
 
 const port = Number(process.env.PORT) || 3001;
 

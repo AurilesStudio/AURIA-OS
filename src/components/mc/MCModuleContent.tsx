@@ -5,6 +5,7 @@ import { MCContentModule } from "./modules/MCContentModule";
 import { MCCalendarModule } from "./modules/MCCalendarModule";
 import { MCMemoryModule } from "./modules/MCMemoryModule";
 import { MCTeamModule } from "./modules/MCTeamModule";
+import { MCMonitoringModule } from "./modules/MCMonitoringModule";
 
 const moduleComponents = {
   tasks: MCTasksModule,
@@ -12,6 +13,7 @@ const moduleComponents = {
   calendar: MCCalendarModule,
   memory: MCMemoryModule,
   team: MCTeamModule,
+  monitoring: MCMonitoringModule,
 } as const;
 
 export function MCModuleContent() {

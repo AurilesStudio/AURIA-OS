@@ -235,6 +235,7 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 | **Content Pipeline** | Pipeline création de contenu RS (Idée → Publié) | Haute |
 | **Memory** | Visualisation navigable des mémoires d'AURIA | Moyenne |
 | **Team** | Organigramme, fiches agents, métriques de performance | Moyenne |
+| **Monitoring** | Dashboard santé système, métriques API, logs temps réel | ✅ Fait |
 | **Office** | Scène 3D existante (déjà implémentée) | ✅ Fait |
 
 #### Phase 0 — Setup
@@ -321,6 +322,21 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 - ~~Deployment config~~ ✅ PM2 (`ecosystem.config.cjs`), Nginx reverse proxy (`deploy/nginx.conf` : SPA + /api/* proxy), GitHub Actions CI (`.github/workflows/ci.yml` : lint + tsc frontend + tsc server) (AURI-71)
   - **Pas de déploiement réel** — configs prêtes pour VPS futur
 
+#### Transversal — Monitoring Dashboard (AURI-72) ✅ Complete
+- ~~Dashboard de santé système~~ ✅ 7e module Mission Control read-only avec polling 10s, state local React (pas de Zustand — données éphémères) (AURI-72)
+  - **Server — MetricsCollector** (`server/lib/metrics.ts`) : classe singleton, ring buffer 50 logs, compteurs requêtes/erreurs 4xx/5xx/429, avg response time (max 1000 durations), reset pour tests
+  - **Server — Route monitoring** (`server/routes/monitoring.ts`) : `GET /api/monitoring` → system info (uptime, heap memory, node version, platform) + services status (AURIA API + Supabase ping `mc_tasks` avec latence) + metrics snapshot + logs
+  - **Server — Logger branché** : `metrics.record()` dans `server/middleware/logger.ts` — chaque requête est trackée automatiquement
+  - **MCMonitoringModule** : fetch `${VITE_API_URL}/api/monitoring` avec Bearer token, polling 10s, toggle auto-refresh, states loading/error/data
+  - **MonitoringHeader** : titre + auto-refresh ON/OFF + bouton refresh animé + timestamp dernière MAJ
+  - **SystemHealth** : uptime formaté (Xd Xh Xm Xs), heap memory (barre % cyan), Node version, platform
+  - **ServiceStatus** : cartes AURIA API + Supabase avec dot vert/rouge glow + latence ms + message erreur
+  - **RequestMetrics** : 4 stat cards overlay-glass (total requests, error rate %, avg response time, rate limit hits)
+  - **LogViewer** : terminal-style scrollable (font-mono, 11px), 50 entries max, status color-coded (2xx=emerald, 4xx=amber, 5xx=red), auto-scroll
+  - **Intégration** : sidebar (icône Activity), MCModuleContent, MCHeader (MODULE_TITLES), `.env.example` (VITE_GATEWAY_TOKEN)
+  - **Tests** : 10 tests MetricsCollector (counters, ring buffer, avg, reset) + 7 tests route monitoring (system, services, Supabase error, metrics, logs)
+- **Résultat :** 10 fichiers créés, 7 fichiers modifiés, 17 nouveaux tests, 150 tests total tous verts
+
 #### Transversal — Tests unitaires et d'intégration (AURI-75) ✅ Complete
 - ~~Infrastructure Vitest~~ ✅ Setup Vitest (devDep) + `vitest.config.ts` (globals, node env, alias `@`) + scripts `npm test` / `npm run test:coverage` (AURI-75)
 - ~~Tests middleware serveur~~ ✅ 8 tests — auth (401 sans header, 403 token invalide, 500 GATEWAY_TOKEN absent, skip health, pass valide) + rate limit (X-RateLimit-* headers, 429 après dépassement, décrémentation remaining) (AURI-75)
@@ -332,7 +348,7 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
   - `memoryActions` (17 tests) : createMemory, updateMemory, deleteMemory, listMemories, searchMemories, getRecent
   - `teamActions` (18 tests) : createAgent, updateAgent, setStatus, logTask, deleteAgent, listAgents, getActiveAgents
 - ~~CI intégration~~ ✅ Step `npm test` ajouté dans `.github/workflows/ci.yml` après les type checks (AURI-75)
-- **Résultat :** 7 fichiers de test, 133 tests, tous verts (~191ms)
+- **Résultat :** 9 fichiers de test, 150 tests, tous verts
 
 ## 8. Roadmap — Prochaines étapes
 1. Exécution réelle des tâches par les agents via LLM.
@@ -344,3 +360,4 @@ Le Mission Control est un ensemble de modules intégrés dans AURIA-OS pour pilo
 7. ~~Mission Control : Tasks Board, Calendar, Content Pipeline, Memory, Team~~ ✅ — Tous les 5 modules implémentés.
 8. ~~API Bridge Hono + Deployment Config~~ ✅ — Serveur API sur port 3001, PM2/Nginx/CI configs.
 9. ~~Tests unitaires et d'intégration~~ ✅ — Vitest, 133 tests (middleware + routes + 5 action APIs), CI intégré.
+10. ~~Monitoring Dashboard~~ ✅ — 7e module MC, MetricsCollector + route monitoring + 5 sous-composants, 150 tests total.
