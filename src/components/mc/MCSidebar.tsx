@@ -10,6 +10,11 @@ import {
   Github,
   BarChart2,
   StickyNote,
+  Home,
+  MessageSquare,
+  Coins,
+  TrendingUp,
+  Settings,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -32,14 +37,35 @@ const integrationModules: { id: MCModule; icon: typeof Building2; label: string 
   { id: "notion", icon: StickyNote, label: "Notion" },
 ];
 
+const officeTools: { id: string; icon: typeof Building2; label: string }[] = [
+  { id: "home", icon: Home, label: "Command" },
+  { id: "chat", icon: MessageSquare, label: "Activity" },
+  { id: "alerts", icon: Coins, label: "Tokens" },
+  { id: "trading", icon: TrendingUp, label: "Trading" },
+  { id: "settings", icon: Settings, label: "Settings" },
+];
+
 export function MCSidebar() {
   const activeModule = useStore((s) => s.mcActiveModule);
   const setActive = useStore((s) => s.setMCActiveModule);
   const collapsed = useStore((s) => s.mcSidebarCollapsed);
   const toggle = useStore((s) => s.toggleMCSidebar);
   const systemStatus = useStore((s) => s.systemStatus);
+  const officePanel = useStore((s) => s.mcOfficePanel);
+  const setOfficePanel = useStore((s) => s.setMCOfficePanel);
 
   const isOnline = systemStatus !== "ERROR";
+
+  const handleToolClick = (toolId: string) => {
+    if (activeModule === "office" && officePanel === toolId) {
+      // Toggle off if already open
+      setOfficePanel(null);
+    } else {
+      // Switch to office + open panel
+      if (activeModule !== "office") setActive("office");
+      setOfficePanel(toolId);
+    }
+  };
 
   return (
     <motion.nav
@@ -66,7 +92,7 @@ export function MCSidebar() {
       </div>
 
       {/* Module buttons */}
-      <div className="flex flex-1 flex-col gap-1 px-2 py-2">
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-2">
         {modules.map(({ id, icon: Icon, label }) => {
           const isActive = activeModule === id;
           return (
@@ -127,6 +153,40 @@ export function MCSidebar() {
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
+              <Icon className="h-4 w-4 shrink-0" />
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs font-medium whitespace-nowrap"
+                >
+                  {label}
+                </motion.span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Tools separator */}
+        <div className="my-2 border-t border-white/5" />
+        {!collapsed && (
+          <span className="px-3 pb-1 text-[10px] uppercase tracking-wider text-text-muted/50">
+            Tools
+          </span>
+        )}
+
+        {officeTools.map(({ id, icon: Icon, label }) => {
+          const isActive = activeModule === "office" && officePanel === id;
+          return (
+            <button
+              key={id}
+              onClick={() => handleToolClick(id)}
+              className={`relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+                isActive
+                  ? "bg-white/10 text-text-primary"
+                  : "text-text-muted hover:bg-white/5 hover:text-text-primary"
+              }`}
+            >
               <Icon className="h-4 w-4 shrink-0" />
               {!collapsed && (
                 <motion.span

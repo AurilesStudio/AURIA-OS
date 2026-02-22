@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, MessageSquare, Users, Coins, Settings, TrendingUp, Bell, Grid3X3, Move, Eye, EyeOff, Minus, Plus, ArrowLeftRight, ArrowUpDown } from "lucide-react";
+import { Bell, Grid3X3, Move, Eye, EyeOff, Minus, Plus, ArrowLeftRight, ArrowUpDown } from "lucide-react";
 import { ROOM_SIZE, TRADING_ROOM_SIZE, ARENA_ROOM_SIZE } from "@/types";
 import { TokenGaugesPanel } from "@/components/monitoring/TokenGaugesPanel";
 import { ActivityStream } from "@/components/activity/ActivityStream";
@@ -11,16 +11,7 @@ import { CameraToolbar } from "@/components/camera/CameraToolbar";
 import { TradingPanel } from "@/components/trading/TradingPanel";
 import { useStore } from "@/store/useStore";
 
-type PanelId = "home" | "chat" | "agents" | "alerts" | "trading" | "settings" | null;
-
-const sidebarItems = [
-  { id: "home" as const, icon: Home },
-  { id: "chat" as const, icon: MessageSquare },
-  { id: "agents" as const, icon: Users },
-  { id: "alerts" as const, icon: Coins },
-  { id: "trading" as const, icon: TrendingUp },
-  { id: "settings" as const, icon: Settings },
-] as const;
+type PanelId = string | null;
 
 function SettingsPanel() {
   const opportunityAlertsEnabled = useStore((s) => s.opportunityAlertsEnabled);
@@ -322,47 +313,26 @@ function EditModeToolbar() {
 }
 
 export function DashboardOverlay() {
-  const [activePanel, setActivePanel] = useState<PanelId>(null);
+  const activePanel = useStore((s) => s.mcOfficePanel);
   const fpvActive = useStore((s) => s.auriaFpvActive);
   const editMode = useStore((s) => s.editMode);
   const sidebarCollapsed = useStore((s) => s.mcSidebarCollapsed);
 
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
 
-  const toggle = (id: PanelId) => {
-    setActivePanel((prev) => (prev === id ? null : id));
-  };
-
   return (
     <div className="pointer-events-none fixed inset-0 z-10 flex" style={{ paddingLeft: sidebarWidth }}>
-      {/* Thin icon sidebar */}
-      <div className="pointer-events-auto flex flex-col items-center gap-1 px-2 py-4">
-        <div className="flex flex-col gap-1 rounded-xl bg-bg-surface/80 p-1.5 backdrop-blur-sm border border-white/5">
-          {sidebarItems.map(({ id, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => toggle(id)}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all ${
-                activePanel === id
-                  ? "bg-white/10 text-text-primary"
-                  : "text-text-muted hover:bg-white/5 hover:text-text-primary"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
+      {/* Expandable panel (driven by MCSidebar Tools section) */}
+      <div className="py-4 pl-2">
+        <AnimatePresence>
+          {activePanel && (
+            <SidebarPanel
+              key={activePanel}
+              panelId={activePanel}
+            />
+          )}
+        </AnimatePresence>
       </div>
-
-      {/* Expandable panel */}
-      <AnimatePresence>
-        {activePanel && (
-          <SidebarPanel
-            key={activePanel}
-            panelId={activePanel}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Edit-mode toolbar — bottom center */}
       <AnimatePresence>

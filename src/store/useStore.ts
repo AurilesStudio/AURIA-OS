@@ -503,6 +503,8 @@ interface AuriaStore {
   setMCActiveModule: (module: MCModule) => void;
   mcSidebarCollapsed: boolean;
   toggleMCSidebar: () => void;
+  mcOfficePanel: string | null;
+  setMCOfficePanel: (panel: string | null) => void;
 
   // AURIA FPV (not persisted)
   auriaFpvActive: boolean;
@@ -1435,11 +1437,13 @@ export const useStore = create<AuriaStore>()(persist((set) => ({
   setMCActiveModule: (module) =>
     set((state) => ({
       mcActiveModule: module,
-      // Disable FPV when leaving Office
-      ...(module !== "office" && state.auriaFpvActive ? { auriaFpvActive: false } : {}),
+      // Disable FPV and close office panel when leaving Office
+      ...(module !== "office" ? { mcOfficePanel: null, ...(state.auriaFpvActive ? { auriaFpvActive: false } : {}) } : {}),
     })),
   mcSidebarCollapsed: false,
   toggleMCSidebar: () => set((state) => ({ mcSidebarCollapsed: !state.mcSidebarCollapsed })),
+  mcOfficePanel: null,
+  setMCOfficePanel: (panel) => set({ mcOfficePanel: panel }),
 
   // ── AURIA FPV ──────────────────────────────────────────────
   auriaFpvActive: false,
